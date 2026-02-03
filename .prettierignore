@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+
+# Generated files
+css/
+
+# Config files that should not be formatted
+*.lock
+*.log

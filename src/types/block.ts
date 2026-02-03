@@ -1,0 +1,93 @@
+export interface Block {
+  blockHeight: number;
+  stateHash: string;
+  parentHash: string;
+  creator: string;
+  creatorAccount: {
+    publicKey: string;
+  };
+  dateTime: string;
+  txFees: string;
+  snarkFees: string;
+  canonical: boolean;
+  receivedTime: string;
+  winnerAccount: {
+    publicKey: string;
+  };
+  protocolState: {
+    consensusState: {
+      epoch: number;
+      slot: number;
+      blockHeight: number;
+    };
+    previousStateHash: string;
+  };
+}
+
+export interface BlockSummary {
+  blockHeight: number;
+  stateHash: string;
+  creator: string;
+  dateTime: string;
+  txFees: string;
+  snarkFees: string;
+  canonical: boolean;
+  transactionCount?: number;
+  coinbase?: string;
+}
+
+export interface BlockDetail extends Block {
+  transactions: {
+    userCommands: UserCommand[];
+    zkappCommands: ZkAppCommand[];
+    feeTransfer: FeeTransfer[];
+    coinbase: string;
+  };
+}
+
+export interface UserCommand {
+  hash: string;
+  kind: string;
+  from: string;
+  to: string;
+  amount: string;
+  fee: string;
+  memo: string;
+  nonce: number;
+  failureReason: string | null;
+  dateTime: string;
+}
+
+export interface ZkAppCommand {
+  hash: string;
+  zkappCommand: {
+    memo: string;
+    feePayer: {
+      body: {
+        publicKey: string;
+        fee: string;
+      };
+    };
+    accountUpdates: AccountUpdate[];
+  };
+  failureReason: string[] | null;
+  dateTime: string;
+}
+
+export interface AccountUpdate {
+  body: {
+    publicKey: string;
+    tokenId: string;
+    balanceChange: {
+      magnitude: string;
+      sgn: string;
+    };
+    callDepth: number;
+  };
+}
+
+export interface FeeTransfer {
+  recipient: string;
+  fee: string;
+  type: string;
+}

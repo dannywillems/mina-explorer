@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Check formatting
+        run: npx prettier --check "src/**/*.{ts,tsx,scss}"
+
+      - name: Build
+        run: npx vite build
+
+      - name: Check trailing whitespace
+        run: |
+          files_with_trailing_ws=$(find . -type f \( \
+            -name "*.ts" -o -name "*.tsx" -o -name "*.json" \
+            -o -name "*.scss" -o -name "*.md" -o -name "*.yml" \) \
+            -not -path "./node_modules/*" \
+            -not -path "./dist/*" \
+            -not -path "./.git/*" \
+            -exec grep -l '[[:space:]]$' {} + 2>/dev/null || true)
+          if [ -n "$files_with_trailing_ws" ]; then
+            echo "Files with trailing whitespaces found:"
+            echo "$files_with_trailing_ws" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "No trailing whitespaces found."

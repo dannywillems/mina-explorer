@@ -1,0 +1,25 @@
+{
+  "name": "mina-explorer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.1",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^5.1.3",
+    "eslint": "^9.26.0",
+    "prettier": "^3.5.3",
+    "sass": "^1.89.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.3.1"
+  }
+}
