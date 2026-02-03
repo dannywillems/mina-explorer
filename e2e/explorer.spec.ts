@@ -7,8 +7,8 @@ test.describe('Mina Explorer', () => {
     // Check page title
     await expect(page).toHaveTitle(/Mina Explorer/);
 
-    // Check main heading
-    await expect(page.locator('h1')).toContainText('Mina Explorer');
+    // Check main heading (Mina is now an image, so just check for Explorer)
+    await expect(page.locator('h1')).toContainText('Explorer');
 
     // Check search bar is present (use first() to handle multiple)
     await expect(
@@ -66,7 +66,7 @@ test.describe('Mina Explorer', () => {
   });
 
   test('blocks page loads', async ({ page }) => {
-    await page.goto('/blocks');
+    await page.goto('/#/blocks');
 
     // Check page heading
     await expect(page.locator('h2')).toContainText('Blocks');
@@ -82,7 +82,7 @@ test.describe('Mina Explorer', () => {
 
   test('block detail page loads directly', async ({ page }) => {
     // Go to a specific block directly
-    await page.goto('/block/25500');
+    await page.goto('/#/block/25500');
 
     // Wait for block detail page to load
     await expect(
@@ -160,18 +160,18 @@ test.describe('Mina Explorer', () => {
 
     // Click on logo to go back home
     await page.click('a.navbar-brand');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(/\/#?\/?$/);
   });
 
   test('404 page for invalid routes', async ({ page }) => {
-    await page.goto('/invalid-route-that-does-not-exist');
+    await page.goto('/#/invalid-route-that-does-not-exist');
 
     await expect(page.locator('text=404')).toBeVisible();
     await expect(page.locator('text=Page Not Found')).toBeVisible();
   });
 
   test('refresh button works on blocks page', async ({ page }) => {
-    await page.goto('/blocks');
+    await page.goto('/#/blocks');
 
     // Wait for blocks to load
     const tableRows = page.locator('tbody tr');

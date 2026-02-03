@@ -8,8 +8,13 @@ export function Header(): ReactNode {
     <header className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
         <Link to="/" className="navbar-brand d-flex align-items-center">
-          <i className="bi bi-box me-2"></i>
-          Mina Explorer
+          <img
+            src={`${import.meta.env.BASE_URL}mina-logo-light.svg`}
+            alt="Mina"
+            height="24"
+            className="me-2"
+          />
+          Explorer
         </Link>
 
         <button
