@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { NetworkProvider } from '@/context/NetworkContext';
 import { Layout } from '@/components/common';
 import { HomePage, BlocksPage, BlockDetailPage, NotFoundPage } from '@/pages';
@@ -7,7 +7,7 @@ import { HomePage, BlocksPage, BlockDetailPage, NotFoundPage } from '@/pages';
 export function App(): ReactNode {
   return (
     <NetworkProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
@@ -16,7 +16,7 @@ export function App(): ReactNode {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </NetworkProvider>
   );
 }
