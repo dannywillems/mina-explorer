@@ -185,3 +185,189 @@ test.describe('Mina Explorer', () => {
     await expect(tableRows.first()).toBeVisible({ timeout: 15000 });
   });
 });
+
+test.describe('Network Picker', () => {
+  test('dropdown shows all available networks', async ({ page }) => {
+    await page.goto('/');
+
+    // Click on network selector dropdown
+    const networkButton = page.locator('button.dropdown-toggle');
+    await expect(networkButton).toBeVisible();
+    await networkButton.click();
+
+    // Check that all three networks are listed
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    await expect(dropdownMenu.locator('text=Mesa')).toBeVisible();
+    await expect(dropdownMenu.locator('text=Devnet')).toBeVisible();
+    await expect(dropdownMenu.locator('text=Mainnet')).toBeVisible();
+  });
+
+  test('default network is Mesa with testnet badge', async ({ page }) => {
+    await page.goto('/');
+
+    // Check that Mesa is selected by default
+    const networkButton = page.locator('button.dropdown-toggle');
+    await expect(networkButton).toContainText('Mesa');
+
+    // Check that testnet badge is shown
+    await expect(networkButton.locator('.badge:has-text("Testnet")')).toBeVisible();
+  });
+
+  test('can switch to Devnet', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for initial data to load
+    const blockHeightCard = page
+      .locator('.card')
+      .filter({ hasText: 'Block Height' });
+    await expect(blockHeightCard).toBeVisible({ timeout: 15000 });
+
+    // Click on network selector
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    // Wait for dropdown menu to be visible
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    // Click on Devnet
+    await dropdownMenu.locator('button:has-text("Devnet")').click();
+
+    // Verify network button now shows Devnet
+    await expect(networkButton).toContainText('Devnet');
+
+    // Verify testnet badge is still shown (Devnet is a testnet)
+    await expect(
+      networkButton.locator('.badge:has-text("Testnet")'),
+    ).toBeVisible();
+
+    // Wait for data to reload with new network
+    await expect(blockHeightCard.locator('h4')).not.toBeEmpty({ timeout: 15000 });
+  });
+
+  test('can switch to Mainnet', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for initial data to load
+    const blockHeightCard = page
+      .locator('.card')
+      .filter({ hasText: 'Block Height' });
+    await expect(blockHeightCard).toBeVisible({ timeout: 15000 });
+
+    // Click on network selector
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    // Wait for dropdown menu to be visible
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    // Click on Mainnet
+    await dropdownMenu.locator('button:has-text("Mainnet")').click();
+
+    // Verify network button now shows Mainnet
+    await expect(networkButton).toContainText('Mainnet');
+
+    // Verify testnet badge is NOT shown (Mainnet is not a testnet)
+    await expect(
+      networkButton.locator('.badge:has-text("Testnet")'),
+    ).not.toBeVisible();
+  });
+
+  test('selected network is marked as active in dropdown', async ({ page }) => {
+    await page.goto('/');
+
+    // Click on network selector
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    // Wait for dropdown menu to be visible
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    // Check that Mesa (default) has the active class
+    const mesaItem = dropdownMenu.locator('button:has-text("Mesa")');
+    await expect(mesaItem).toHaveClass(/active/);
+
+    // Devnet should not have the active class
+    const devnetItem = dropdownMenu.locator('button:has-text("Devnet")');
+    await expect(devnetItem).not.toHaveClass(/active/);
+  });
+
+  test('network switch persists after navigation', async ({ page }) => {
+    await page.goto('/');
+
+    // Switch to Devnet
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    // Wait for dropdown menu to be visible
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    await dropdownMenu.locator('button:has-text("Devnet")').click();
+
+    // Verify Devnet is selected
+    await expect(networkButton).toContainText('Devnet');
+
+    // Navigate to blocks page
+    await page.click('a.nav-link:has-text("Blocks")');
+    await expect(page).toHaveURL(/\/blocks/);
+
+    // Verify Devnet is still selected
+    await expect(networkButton).toContainText('Devnet');
+
+    // Navigate back to home
+    await page.click('a.navbar-brand');
+
+    // Verify Devnet is still selected
+    await expect(networkButton).toContainText('Devnet');
+  });
+
+  test('network switch reloads blocks data', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for recent blocks to load
+    const recentBlocksSection = page
+      .locator('.card')
+      .filter({ hasText: 'Recent Blocks' });
+    await expect(recentBlocksSection).toBeVisible({ timeout: 15000 });
+
+    const tableRows = recentBlocksSection.locator('tbody tr');
+    await expect(tableRows.first()).toBeVisible({ timeout: 15000 });
+
+    // Get first block height before switch
+    const firstBlockBefore = await tableRows
+      .first()
+      .locator('a')
+      .first()
+      .textContent();
+    console.log('Block height before network switch:', firstBlockBefore);
+
+    // Switch to Devnet
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    // Wait for dropdown menu to be visible
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    await dropdownMenu.locator('button:has-text("Devnet")').click();
+
+    // Wait for data to reload
+    await expect(tableRows.first()).toBeVisible({ timeout: 15000 });
+
+    // Get first block height after switch
+    const firstBlockAfter = await tableRows
+      .first()
+      .locator('a')
+      .first()
+      .textContent();
+    console.log('Block height after network switch:', firstBlockAfter);
+
+    // Block heights should exist (data loaded successfully)
+    expect(firstBlockAfter).toBeTruthy();
+  });
+});

@@ -8,9 +8,9 @@ export default defineConfig({
   },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 1,
+  retries: process.env.CI ? 2 : 1,
   workers: 1,
-  reporter: 'list',
+  reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
@@ -21,4 +21,10 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
+  webServer: {
+    command: 'npx vite --port 5173',
+    port: 5173,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 });
