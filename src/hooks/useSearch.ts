@@ -1,8 +1,12 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isValidBlockHash, isBlockHeight } from '@/utils/formatters';
+import {
+  isValidBlockHash,
+  isBlockHeight,
+  isValidPublicKey,
+} from '@/utils/formatters';
 
-type SearchType = 'block' | 'unknown';
+type SearchType = 'block' | 'account' | 'unknown';
 
 interface SearchResult {
   type: SearchType;
@@ -24,6 +28,10 @@ export function useSearch(): {
 
     if (isValidBlockHash(trimmed)) {
       return { type: 'block', path: `/block/${trimmed}` };
+    }
+
+    if (isValidPublicKey(trimmed)) {
+      return { type: 'account', path: `/account/${trimmed}` };
     }
 
     return { type: 'unknown', path: '' };

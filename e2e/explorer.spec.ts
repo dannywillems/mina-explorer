@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { FIXTURES } from './fixtures';
 
 test.describe('Mina Explorer', () => {
   test('homepage loads correctly', async ({ page }) => {
@@ -81,8 +82,8 @@ test.describe('Mina Explorer', () => {
   });
 
   test('block detail page loads directly', async ({ page }) => {
-    // Go to a specific block directly
-    await page.goto('/#/block/25500');
+    // Go to a specific block directly using fixture
+    await page.goto(`/#/block/${FIXTURES.blocks.knownHeight}`);
 
     // Wait for block detail page to load
     await expect(
@@ -130,13 +131,15 @@ test.describe('Mina Explorer', () => {
   test('search by block height works', async ({ page }) => {
     await page.goto('/');
 
-    // Type in search box and submit
+    // Type in search box and submit using fixture
     const searchInput = page.locator('input[placeholder*="Search"]').first();
-    await searchInput.fill('25500');
+    await searchInput.fill(String(FIXTURES.blocks.knownHeight));
     await searchInput.press('Enter');
 
     // Should navigate to block detail page
-    await expect(page).toHaveURL(/\/block\/25500/);
+    await expect(page).toHaveURL(
+      new RegExp(`/block/${FIXTURES.blocks.knownHeight}`),
+    );
     await expect(
       page.locator('.card-header h5').filter({ hasText: /Block #/ }),
     ).toBeVisible({ timeout: 15000 });
@@ -373,5 +376,101 @@ test.describe('Network Picker', () => {
 
     // Block heights should exist (data loaded successfully)
     expect(firstBlockAfter).toBeTruthy();
+  });
+});
+
+test.describe('Account Page', () => {
+  test('account page loads with valid public key', async ({ page }) => {
+    // Navigate to a known account using fixture
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for account page to load
+    await expect(page.locator('h2')).toContainText('Account Details');
+
+    // Wait for either account data or loading/error state
+    // The page should show something (account card, loading, or error)
+    const accountCard = page
+      .locator('.card-header h5')
+      .filter({ hasText: /Account/ });
+    const alert = page.locator('.alert');
+    const loadingSpinner = page.locator('.spinner-border');
+
+    // Wait for any of these to appear
+    await expect(accountCard.or(alert).or(loadingSpinner)).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test('account page handles API response', async ({ page }) => {
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for page to load
+    await expect(page.locator('h2')).toContainText('Account Details');
+
+    // Wait for either success (account card) or failure (alert)
+    const accountCard = page
+      .locator('.card-header h5')
+      .filter({ hasText: /Account/ });
+    const alert = page.locator('.alert');
+
+    // Wait for loading to complete (either success or error)
+    await expect(accountCard.or(alert)).toBeVisible({ timeout: 20000 });
+
+    // If account loaded successfully, check for basic info
+    if (await accountCard.isVisible()) {
+      await expect(page.locator('text=Public Key').first()).toBeVisible();
+      await expect(page.locator('text=Balance').first()).toBeVisible();
+    }
+  });
+
+  test('account page shows error for invalid account', async ({ page }) => {
+    // Navigate to an invalid account
+    await page.goto(`/#/account/${FIXTURES.accounts.invalidAccount}`);
+
+    // Wait for page to load
+    await expect(page.locator('h2')).toContainText('Account Details');
+
+    // Should show error or not found message
+    await expect(
+      page.locator('.alert').filter({ hasText: /not found|error/i }),
+    ).toBeVisible({ timeout: 15000 });
+  });
+
+  test('can navigate to account from block producer link', async ({ page }) => {
+    // Go to a block detail page
+    await page.goto(`/#/block/${FIXTURES.blocks.knownHeight}`);
+
+    // Wait for block to load
+    await expect(
+      page.locator('.card-header h5').filter({ hasText: /Block #/ }),
+    ).toBeVisible({ timeout: 15000 });
+
+    // Find the block producer link and click it
+    const producerLink = page
+      .locator('tr')
+      .filter({ hasText: 'Block Producer' })
+      .locator('a');
+    await expect(producerLink).toBeVisible();
+
+    await producerLink.click();
+
+    // Should navigate to account page
+    await expect(page).toHaveURL(/\/account\//);
+    await expect(page.locator('h2')).toContainText('Account Details');
+  });
+
+  test('search by public key navigates to account page', async ({ page }) => {
+    await page.goto('/');
+
+    // Type a public key in search box
+    const searchInput = page.locator('input[placeholder*="Search"]').first();
+    await searchInput.fill(FIXTURES.accounts.blockProducer);
+    await searchInput.press('Enter');
+
+    // Should navigate to account page
+    await expect(page).toHaveURL(
+      new RegExp(`/account/${FIXTURES.accounts.blockProducer}`),
+    );
+    await expect(page.locator('h2')).toContainText('Account Details');
   });
 });

@@ -5,3 +5,4 @@ export {
   fetchBlockByHash,
   fetchNetworkState,
 } from './blocks';
+export { fetchAccount } from './accounts';
