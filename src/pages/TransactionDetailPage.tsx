@@ -212,13 +212,21 @@ function TransactionDetail({
             {isUserCommand && transaction.amount && (
               <div className="flex justify-between border-b border-border pb-2">
                 <span className="text-muted-foreground">Amount</span>
-                <Amount value={transaction.amount} showFiat />
+                <Amount
+                  value={transaction.amount}
+                  showFiat
+                  transactionDate={transaction.dateTime}
+                />
               </div>
             )}
 
             <div className="flex justify-between border-b border-border pb-2">
               <span className="text-muted-foreground">Fee</span>
-              <Amount value={transaction.fee} showFiat />
+              <Amount
+                value={transaction.fee}
+                showFiat
+                transactionDate={transaction.dateTime}
+              />
             </div>
 
             {isUserCommand && transaction.nonce !== undefined && (

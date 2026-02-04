@@ -900,6 +900,36 @@ test.describe('Fiat Value Display', () => {
     // Look for the parenthesized fiat amount
     await expect(page.locator('text=/\\(\\$[0-9]/i').first()).toBeVisible();
   });
+
+  test('transaction detail shows fiat value for amount', async ({ page }) => {
+    // Navigate to a known transaction
+    await page.goto(`/#/transaction/${FIXTURES.transactions.userCommand}`);
+
+    // Wait for transaction details to load
+    await expect(page.locator('text=Amount').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check for fiat value display (current or historical)
+    // Format: "X.XX MINA ($X.XX)" or "X.XX MINA ($X.XX at tx time)"
+    await expect(page.locator('text=/\\(\\$[0-9]/i').first()).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
+  test('transaction detail shows fiat value for fee', async ({ page }) => {
+    await page.goto(`/#/transaction/${FIXTURES.transactions.userCommand}`);
+
+    // Wait for transaction details to load
+    await expect(page.locator('text=Fee').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Fee row should show fiat value (check for MINA amount with $ value)
+    await expect(page.locator('text=/MINA.*\\$/').first()).toBeVisible({
+      timeout: 15000,
+    });
+  });
 });
 
 test.describe('Transaction Not Found', () => {
