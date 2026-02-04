@@ -42,7 +42,11 @@ export function Pagination({
     <nav aria-label="Page navigation" className="flex justify-center">
       <div className="flex items-center gap-1">
         <button
-          className={cn(buttonBase, currentPage === 1 ? buttonDisabled : buttonEnabled, 'px-2')}
+          className={cn(
+            buttonBase,
+            currentPage === 1 ? buttonDisabled : buttonEnabled,
+            'px-2',
+          )}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >

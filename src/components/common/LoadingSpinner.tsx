@@ -21,10 +21,7 @@ export function LoadingSpinner({
 }: LoadingSpinnerProps): ReactNode {
   return (
     <div
-      className={cn(
-        'flex items-center justify-center gap-2 p-4',
-        className,
-      )}
+      className={cn('flex items-center justify-center gap-2 p-4', className)}
     >
       <Loader2 className={cn('animate-spin text-primary', sizeClasses[size])} />
       {text && <span className="text-sm text-muted-foreground">{text}</span>}
@@ -38,9 +35,5 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps): ReactNode {
-  return (
-    <div
-      className={cn('animate-pulse rounded-md bg-muted', className)}
-    />
-  );
+  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />;
 }

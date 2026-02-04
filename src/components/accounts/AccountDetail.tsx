@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { HashLink, Amount, LoadingSpinner } from '@/components/common';
+import { cn } from '@/lib/utils';
 import type { Account } from '@/types';
 
 interface AccountDetailProps {
@@ -21,7 +23,7 @@ export function AccountDetail({
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
+      <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -29,7 +31,7 @@ export function AccountDetail({
 
   if (!account) {
     return (
-      <div className="alert alert-warning" role="alert">
+      <div className="rounded-md bg-warning/10 p-4 text-sm text-warning">
         Account not found.
       </div>
     );
@@ -38,197 +40,179 @@ export function AccountDetail({
   const isZkApp = account.zkappState && account.zkappState.length > 0;
 
   return (
-    <div>
-      <div className="card mb-4">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">
-            Account
-            {isZkApp && <span className="ms-2 badge bg-info">zkApp</span>}
-          </h5>
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            onClick={() => setShowJson(!showJson)}
-          >
-            {showJson ? 'Hide JSON' : 'View JSON'}
-          </button>
+    <div className="rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">Account</h2>
+          {isZkApp && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              zkApp
+            </span>
+          )}
         </div>
-        <div className="card-body">
-          {showJson ? (
-            <pre
-              className="bg-dark text-light p-3 rounded"
-              style={{
-                maxHeight: '600px',
-                overflow: 'auto',
-                fontSize: '0.8rem',
-              }}
-            >
-              {JSON.stringify(account, null, 2)}
-            </pre>
-          ) : (
-            <>
-              <div className="row mb-4">
-                <div className="col-12">
-                  <table className="table table-borderless table-sm">
-                    <tbody>
-                      <tr>
-                        <th className="text-muted" style={{ width: '20%' }}>
-                          Public Key
+        <button
+          className={cn(
+            'rounded-md border border-input px-3 py-1.5 text-sm',
+            'transition-colors hover:bg-accent',
+          )}
+          onClick={() => setShowJson(!showJson)}
+        >
+          {showJson ? 'Hide JSON' : 'View JSON'}
+        </button>
+      </div>
+      <div className="p-6">
+        {showJson ? (
+          <pre className="max-h-[600px] overflow-auto rounded-md bg-accent p-4 font-mono text-xs">
+            {JSON.stringify(account, null, 2)}
+          </pre>
+        ) : (
+          <div className="space-y-6">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1 border-b border-border pb-3">
+                <span className="text-sm text-muted-foreground">
+                  Public Key
+                </span>
+                <span className="break-all font-mono text-sm">
+                  {account.publicKey}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted-foreground">Balance</span>
+                <Amount value={account.balance.total} />
+              </div>
+              {account.balance.liquid && (
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">Liquid Balance</span>
+                  <Amount value={account.balance.liquid} />
+                </div>
+              )}
+              {account.balance.locked && (
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">Locked Balance</span>
+                  <Amount value={account.balance.locked} />
+                </div>
+              )}
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted-foreground">Nonce</span>
+                <span>{account.nonce}</span>
+              </div>
+              {account.delegate && (
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">Delegate</span>
+                  <HashLink hash={account.delegate} type="account" />
+                </div>
+              )}
+              {account.tokenSymbol && (
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">Token Symbol</span>
+                  <span>{account.tokenSymbol}</span>
+                </div>
+              )}
+              {account.zkappUri && (
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">zkApp URI</span>
+                  <a
+                    href={account.zkappUri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    {account.zkappUri}
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* zkApp State */}
+            {isZkApp && account.zkappState && (
+              <div>
+                <h3 className="mb-3 font-semibold">zkApp State</h3>
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-accent/50">
+                        <th className="w-20 px-4 py-2 text-left font-medium">
+                          Index
                         </th>
-                        <td>
-                          <span
-                            className="font-monospace text-break"
-                            style={{ fontSize: '0.85rem' }}
-                          >
-                            {account.publicKey}
-                          </span>
-                        </td>
+                        <th className="px-4 py-2 text-left font-medium">
+                          Value
+                        </th>
                       </tr>
-                      <tr>
-                        <th className="text-muted">Balance</th>
-                        <td>
-                          <Amount value={account.balance.total} />
-                        </td>
-                      </tr>
-                      {account.balance.liquid && (
-                        <tr>
-                          <th className="text-muted">Liquid Balance</th>
-                          <td>
-                            <Amount value={account.balance.liquid} />
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {account.zkappState.map((state, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-2">{index}</td>
+                          <td className="px-4 py-2">
+                            <span className="break-all font-mono text-xs">
+                              {state || '0'}
+                            </span>
                           </td>
                         </tr>
-                      )}
-                      {account.balance.locked && (
-                        <tr>
-                          <th className="text-muted">Locked Balance</th>
-                          <td>
-                            <Amount value={account.balance.locked} />
-                          </td>
-                        </tr>
-                      )}
-                      <tr>
-                        <th className="text-muted">Nonce</th>
-                        <td>{account.nonce}</td>
-                      </tr>
-                      {account.delegate && (
-                        <tr>
-                          <th className="text-muted">Delegate</th>
-                          <td>
-                            <HashLink hash={account.delegate} type="account" />
-                          </td>
-                        </tr>
-                      )}
-                      {account.tokenSymbol && (
-                        <tr>
-                          <th className="text-muted">Token Symbol</th>
-                          <td>{account.tokenSymbol}</td>
-                        </tr>
-                      )}
-                      {account.zkappUri && (
-                        <tr>
-                          <th className="text-muted">zkApp URI</th>
-                          <td>
-                            <a
-                              href={account.zkappUri}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {account.zkappUri}
-                            </a>
-                          </td>
-                        </tr>
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
+            )}
 
-              {isZkApp && account.zkappState && (
-                <div className="mb-4">
-                  <h6>zkApp State</h6>
-                  <div className="table-responsive">
-                    <table className="table table-sm table-bordered">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '80px' }}>Index</th>
-                          <th>Value</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {account.zkappState.map((state, index) => (
-                          <tr key={index}>
-                            <td>{index}</td>
-                            <td>
-                              <span
-                                className="font-monospace text-break"
-                                style={{ fontSize: '0.8rem' }}
-                              >
-                                {state || '0'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            {/* Permissions */}
+            {account.permissions && (
+              <div>
+                <h3 className="mb-3 font-semibold">Permissions</h3>
+                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                  {Object.entries(account.permissions).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {key}:
+                      </span>
+                      <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vesting Schedule */}
+            {account.timing && (
+              <div>
+                <h3 className="mb-3 font-semibold">Vesting Schedule</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-muted-foreground">
+                      Initial Minimum Balance
+                    </span>
+                    <Amount value={account.timing.initialMinimumBalance} />
+                  </div>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-muted-foreground">Cliff Time</span>
+                    <span>{account.timing.cliffTime}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-muted-foreground">Cliff Amount</span>
+                    <Amount value={account.timing.cliffAmount} />
+                  </div>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-muted-foreground">
+                      Vesting Period
+                    </span>
+                    <span>{account.timing.vestingPeriod}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-muted-foreground">
+                      Vesting Increment
+                    </span>
+                    <Amount value={account.timing.vestingIncrement} />
                   </div>
                 </div>
-              )}
-
-              {account.permissions && (
-                <div className="mb-4">
-                  <h6>Permissions</h6>
-                  <div className="row">
-                    {Object.entries(account.permissions).map(([key, value]) => (
-                      <div key={key} className="col-md-4 col-sm-6 mb-2">
-                        <small className="text-muted">{key}:</small>{' '}
-                        <span className="badge bg-secondary">{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {account.timing && (
-                <div className="mb-4">
-                  <h6>Vesting Schedule</h6>
-                  <table className="table table-sm table-borderless">
-                    <tbody>
-                      <tr>
-                        <th className="text-muted" style={{ width: '30%' }}>
-                          Initial Minimum Balance
-                        </th>
-                        <td>
-                          <Amount
-                            value={account.timing.initialMinimumBalance}
-                          />
-                        </td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Cliff Time</th>
-                        <td>{account.timing.cliffTime}</td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Cliff Amount</th>
-                        <td>
-                          <Amount value={account.timing.cliffAmount} />
-                        </td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Vesting Period</th>
-                        <td>{account.timing.vestingPeriod}</td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Vesting Increment</th>
-                        <td>
-                          <Amount value={account.timing.vestingIncrement} />
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

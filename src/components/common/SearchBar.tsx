@@ -54,9 +54,7 @@ export function SearchBar({
           <span className="hidden sm:inline">Search</span>
         </button>
       </div>
-      {error && (
-        <p className="mt-1 text-xs text-destructive">{error}</p>
-      )}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </form>
   );
 }

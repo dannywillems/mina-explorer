@@ -72,8 +72,7 @@ export class GraphQLClient {
       if (error instanceof ApiError) {
         throw error;
       }
-      const errorMsg =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[API] ${queryName} FAILED (${duration}ms):`, errorMsg);
       throw new ApiError(`Network error: ${errorMsg}`);
     }

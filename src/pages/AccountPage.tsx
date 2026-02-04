@@ -8,8 +8,8 @@ export function AccountPage(): ReactNode {
   const { account, loading, error } = useAccount(publicKey);
 
   return (
-    <div>
-      <h2 className="mb-4">Account Details</h2>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Account Details</h1>
       <AccountDetail account={account} loading={loading} error={error} />
     </div>
   );

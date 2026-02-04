@@ -1,6 +1,8 @@
 import { useState, type ReactNode, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { isValidPublicKey, formatHash } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 
 // Notable accounts / whales for easy access
 const NOTABLE_ACCOUNTS = [
@@ -52,66 +54,79 @@ export function AccountsPage(): ReactNode {
   };
 
   return (
-    <div>
-      <h2 className="mb-4">Account Lookup</h2>
-      <div className="card">
-        <div className="card-body">
-          <p className="text-muted mb-4">
-            Enter a Mina public key to view account details, balance, and zkApp
-            state.
-          </p>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label htmlFor="publicKey" className="form-label">
-                Public Key
-              </label>
-              <input
-                type="text"
-                className={`form-control font-monospace ${error ? 'is-invalid' : ''}`}
-                id="publicKey"
-                placeholder="B62q..."
-                value={publicKey}
-                onChange={e => {
-                  setPublicKey(e.target.value);
-                  setError(null);
-                }}
-              />
-              {error && <div className="invalid-feedback">{error}</div>}
-              <div className="form-text">
-                Public keys start with B62 and are 55 characters long.
-              </div>
-            </div>
-            <button type="submit" className="btn btn-primary">
-              View Account
-            </button>
-          </form>
-        </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Account Lookup</h1>
+
+      <div className="rounded-lg border border-border bg-card p-6">
+        <p className="mb-4 text-muted-foreground">
+          Enter a Mina public key to view account details, balance, and zkApp
+          state.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label
+              htmlFor="publicKey"
+              className="mb-2 block text-sm font-medium"
+            >
+              Public Key
+            </label>
+            <input
+              type="text"
+              id="publicKey"
+              placeholder="B62q..."
+              value={publicKey}
+              onChange={e => {
+                setPublicKey(e.target.value);
+                setError(null);
+              }}
+              className={cn(
+                'w-full rounded-md border bg-background px-3 py-2 font-mono text-sm',
+                'focus:outline-none focus:ring-2 focus:ring-primary',
+                error ? 'border-destructive' : 'border-input',
+              )}
+            />
+            {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+            <p className="mt-1 text-sm text-muted-foreground">
+              Public keys start with B62 and are 55 characters long.
+            </p>
+          </div>
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Search size={16} />
+            View Account
+          </button>
+        </form>
       </div>
 
-      <div className="card mt-4">
-        <div className="card-header">
-          <h5 className="mb-0">Notable Accounts</h5>
+      <div className="rounded-lg border border-border bg-card">
+        <div className="border-b border-border px-6 py-4">
+          <h2 className="font-semibold">Notable Accounts</h2>
         </div>
-        <div className="card-body">
-          <p className="text-muted mb-3">
+        <div className="p-6">
+          <p className="mb-4 text-muted-foreground">
             Quick links to notable Mina accounts and whales.
           </p>
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
               <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Public Key</th>
+                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Public Key</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {NOTABLE_ACCOUNTS.map(account => (
-                  <tr key={account.publicKey}>
-                    <td className="fw-medium">{account.name}</td>
-                    <td>
+                  <tr
+                    key={account.publicKey}
+                    className="transition-colors hover:bg-accent/50"
+                  >
+                    <td className="px-4 py-3 font-medium">{account.name}</td>
+                    <td className="px-4 py-3">
                       <Link
                         to={`/account/${account.publicKey}`}
-                        className="font-monospace"
+                        className="font-mono text-primary hover:underline"
                       >
                         {formatHash(account.publicKey, 8)}
                       </Link>
