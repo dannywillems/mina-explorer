@@ -32,8 +32,11 @@ export interface BlockSummary {
   txFees: string;
   snarkFees: string;
   canonical: boolean;
-  transactionCount?: number;
-  coinbase?: string;
+  transactionCount?: number | undefined;
+  coinbase?: string | undefined;
+  epoch?: number | undefined;
+  slot?: number | undefined;
+  slotSinceGenesis?: number | undefined;
 }
 
 export interface BlockDetail extends Block {

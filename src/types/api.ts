@@ -16,6 +16,14 @@ export interface NetworkState {
   };
 }
 
+export interface EpochInfo {
+  epoch: number;
+  slot: number;
+  slotSinceGenesis: number;
+  slotsPerEpoch: number;
+  slotProgress: number;
+}
+
 export interface PaginationParams {
   limit: number;
   offset?: number;

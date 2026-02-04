@@ -11,6 +11,13 @@ const BLOCKS_QUERY = `
       stateHash
       creator
       dateTime
+      protocolState {
+        consensusState {
+          epoch
+          slot
+          slotSinceGenesis
+        }
+      }
       transactions {
         coinbase
       }
@@ -51,6 +58,13 @@ interface ApiBlock {
   stateHash: string;
   creator: string;
   dateTime: string;
+  protocolState?: {
+    consensusState: {
+      epoch: number;
+      slot: number;
+      slotSinceGenesis: number;
+    };
+  };
   transactions: {
     coinbase: string;
   };
@@ -74,6 +88,9 @@ function mapApiBlockToSummary(block: ApiBlock): BlockSummary {
     snarkFees: '0',
     canonical: true,
     coinbase: block.transactions.coinbase,
+    epoch: block.protocolState?.consensusState.epoch,
+    slot: block.protocolState?.consensusState.slot,
+    slotSinceGenesis: block.protocolState?.consensusState.slotSinceGenesis,
   };
 }
 
