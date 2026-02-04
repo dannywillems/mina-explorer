@@ -5,7 +5,8 @@ const NETWORK_KEY = 'mina-explorer-network';
 
 function getDaemonEndpoint(): string {
   const savedNetwork = localStorage.getItem(NETWORK_KEY);
-  const networkId = savedNetwork && NETWORKS[savedNetwork] ? savedNetwork : DEFAULT_NETWORK;
+  const networkId =
+    savedNetwork && NETWORKS[savedNetwork] ? savedNetwork : DEFAULT_NETWORK;
   return NETWORKS[networkId].daemonEndpoint;
 }
 
@@ -145,15 +146,18 @@ async function queryDaemon<T>(
   return result.data;
 }
 
-function transformDaemonAccount(daemonAccount: DaemonAccountResponse['account']): Account | null {
+function transformDaemonAccount(
+  daemonAccount: DaemonAccountResponse['account'],
+): Account | null {
   if (!daemonAccount) {
     return null;
   }
 
   // Check if timing has any non-null values
-  const hasTimingData = daemonAccount.timing &&
+  const hasTimingData =
+    daemonAccount.timing &&
     (daemonAccount.timing.initialMinimumBalance !== null ||
-     daemonAccount.timing.cliffTime !== null);
+      daemonAccount.timing.cliffTime !== null);
 
   return {
     publicKey: daemonAccount.publicKey,
@@ -166,22 +170,34 @@ function transformDaemonAccount(daemonAccount: DaemonAccountResponse['account'])
     delegate: daemonAccount.delegate,
     votingFor: daemonAccount.votingFor,
     receiptChainHash: daemonAccount.receiptChainHash,
-    timing: hasTimingData && daemonAccount.timing ? {
-      initialMinimumBalance: daemonAccount.timing.initialMinimumBalance,
-      cliffTime: daemonAccount.timing.cliffTime
-        ? parseInt(daemonAccount.timing.cliffTime, 10)
+    timing:
+      hasTimingData && daemonAccount.timing
+        ? {
+            initialMinimumBalance: daemonAccount.timing.initialMinimumBalance,
+            cliffTime: daemonAccount.timing.cliffTime
+              ? parseInt(daemonAccount.timing.cliffTime, 10)
+              : null,
+            cliffAmount: daemonAccount.timing.cliffAmount,
+            vestingPeriod: daemonAccount.timing.vestingPeriod
+              ? parseInt(daemonAccount.timing.vestingPeriod, 10)
+              : null,
+            vestingIncrement: daemonAccount.timing.vestingIncrement,
+          }
         : null,
-      cliffAmount: daemonAccount.timing.cliffAmount,
-      vestingPeriod: daemonAccount.timing.vestingPeriod
-        ? parseInt(daemonAccount.timing.vestingPeriod, 10)
-        : null,
-      vestingIncrement: daemonAccount.timing.vestingIncrement,
-    } : null,
     permissions: daemonAccount.permissions,
     zkappState: daemonAccount.zkappState,
     zkappUri: daemonAccount.zkappUri,
     tokenSymbol: daemonAccount.tokenSymbol,
   };
+}
+
+function isCorsError(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    (error.message.includes('Failed to fetch') ||
+      error.message.includes('NetworkError') ||
+      error.message.includes('CORS'))
+  );
 }
 
 export async function fetchAccount(publicKey: string): Promise<Account | null> {
@@ -193,6 +209,15 @@ export async function fetchAccount(publicKey: string): Promise<Account | null> {
     );
     return transformDaemonAccount(data.account);
   } catch (fullQueryError) {
+    // Check for CORS/network errors
+    if (isCorsError(fullQueryError)) {
+      throw new Error(
+        'Unable to reach daemon endpoint. The Mina daemon does not allow ' +
+          'cross-origin requests from this domain. Account lookups require ' +
+          'running the explorer locally or using a CORS proxy.',
+      );
+    }
+
     // Fall back to simple query
     try {
       const data = await queryDaemon<DaemonAccountResponse>(
@@ -219,7 +244,15 @@ export async function fetchAccount(publicKey: string): Promise<Account | null> {
         };
       }
       return null;
-    } catch {
+    } catch (simpleQueryError) {
+      // Check for CORS/network errors
+      if (isCorsError(simpleQueryError)) {
+        throw new Error(
+          'Unable to reach daemon endpoint. The Mina daemon does not allow ' +
+            'cross-origin requests from this domain. Account lookups require ' +
+            'running the explorer locally or using a CORS proxy.',
+        );
+      }
       // Re-throw the original error for better debugging
       throw fullQueryError;
     }

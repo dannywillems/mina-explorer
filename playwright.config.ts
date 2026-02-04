@@ -1,10 +1,14 @@
 import { defineConfig } from '@playwright/test';
 
+// Support testing against deployed website
+const isDeployed = process.env.TEST_DEPLOYED === 'true';
+const deployedUrl = 'https://dannywillems.github.io/mina-explorer';
+
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30000,
+  timeout: 60000,
   expect: {
-    timeout: 10000,
+    timeout: 20000,
   },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -12,7 +16,7 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: isDeployed ? deployedUrl : 'http://localhost:5173',
     trace: 'on-first-retry',
   },
   projects: [
@@ -21,10 +25,14 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
-  webServer: {
-    command: 'npx vite --port 5173',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  ...(isDeployed
+    ? {}
+    : {
+        webServer: {
+          command: 'npx vite --port 5173',
+          port: 5173,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+      }),
 });

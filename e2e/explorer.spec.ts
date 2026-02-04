@@ -204,8 +204,12 @@ test.describe('Network Picker', () => {
 
     // Check that all three networks are listed in dropdown
     await expect(page.locator('button:has-text("Mesa")').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Devnet")').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Mainnet")').first()).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Devnet")').first(),
+    ).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Mainnet")').first(),
+    ).toBeVisible();
   });
 
   test('default network is Mesa with testnet badge', async ({ page }) => {
@@ -398,7 +402,10 @@ test.describe('Network Picker', () => {
       expect(text).toMatch(/[\d,]+/);
     }).toPass({ timeout: 15000 });
 
-    const mesaHeight = await page.locator('text=/[\\d,]+/').first().textContent();
+    const mesaHeight = await page
+      .locator('text=/[\\d,]+/')
+      .first()
+      .textContent();
     console.log('Mesa block height:', mesaHeight);
 
     // Switch to Devnet (use first for desktop)
@@ -425,7 +432,10 @@ test.describe('Network Picker', () => {
       expect(devnetHeight).not.toBe('-');
     }).toPass({ timeout: 15000 });
 
-    const devnetHeight = await page.locator('text=/[\\d,]+/').first().textContent();
+    const devnetHeight = await page
+      .locator('text=/[\\d,]+/')
+      .first()
+      .textContent();
     console.log('Devnet block height:', devnetHeight);
 
     // Devnet should have a different block height than Mesa
@@ -446,9 +456,9 @@ test.describe('Account Page', () => {
     const loadingText = page.locator('text=/Loading/i');
     const errorText = page.locator('text=/error|failed/i');
 
-    await expect(
-      accountCard.or(loadingText).or(errorText),
-    ).toBeVisible({ timeout: 20000 });
+    await expect(accountCard.or(loadingText).or(errorText)).toBeVisible({
+      timeout: 20000,
+    });
   });
 
   test('account page handles API response', async ({ page }) => {
@@ -462,9 +472,9 @@ test.describe('Account Page', () => {
     const loadingText = page.locator('text=/Loading/i');
     const errorText = page.locator('text=/error|failed/i');
 
-    await expect(
-      accountCard.or(loadingText).or(errorText),
-    ).toBeVisible({ timeout: 25000 });
+    await expect(accountCard.or(loadingText).or(errorText)).toBeVisible({
+      timeout: 25000,
+    });
 
     // If account loaded successfully, check for basic info
     if (await accountCard.isVisible()) {
@@ -481,9 +491,9 @@ test.describe('Account Page', () => {
     await expect(page.locator('h1')).toContainText('Account Details');
 
     // Should show error or not found message
-    await expect(
-      page.locator('text=/not found|error/i').first(),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=/not found|error/i').first()).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test('can navigate to account from block producer link', async ({ page }) => {
