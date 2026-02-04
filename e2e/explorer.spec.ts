@@ -569,3 +569,68 @@ test.describe('Account Page', () => {
     await expect(page.locator('h1')).toContainText('Account Details');
   });
 });
+
+test.describe('Transaction Search', () => {
+  test('search by transaction hash navigates to transaction page', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    // Type a transaction hash in search box
+    const searchInput = page.locator('input[placeholder*="Search"]').first();
+    await searchInput.fill(FIXTURES.transactions.userCommand);
+    await searchInput.press('Enter');
+
+    // Should navigate to transaction page
+    await expect(page).toHaveURL(
+      new RegExp(`/transaction/${FIXTURES.transactions.userCommand}`),
+    );
+    await expect(page.locator('h2')).toContainText('Transaction Details');
+  });
+
+  test('transaction detail page shows user command details', async ({
+    page,
+  }) => {
+    // Go directly to transaction page
+    await page.goto(`/#/transaction/${FIXTURES.transactions.userCommand}`);
+
+    // Wait for transaction detail to load
+    await expect(page.locator('h2')).toContainText('Transaction Details', {
+      timeout: 15000,
+    });
+
+    // Check for key fields
+    await expect(page.locator('text=Transaction Hash').first()).toBeVisible();
+    await expect(page.locator('text=From').first()).toBeVisible();
+    await expect(page.locator('text=To').first()).toBeVisible();
+    await expect(page.locator('text=Amount').first()).toBeVisible();
+    await expect(page.locator('text=Fee').first()).toBeVisible();
+  });
+
+  test('transaction detail page shows status badges', async ({ page }) => {
+    await page.goto(`/#/transaction/${FIXTURES.transactions.userCommand}`);
+
+    // Wait for page to load
+    await expect(page.locator('h2')).toContainText('Transaction Details', {
+      timeout: 15000,
+    });
+
+    // Should show status badge (Pending or Confirmed)
+    const statusBadge = page.locator('text=/Pending|Confirmed/').first();
+    await expect(statusBadge).toBeVisible();
+
+    // Should show transaction type badge
+    const typeBadge = page.locator('text=/PAYMENT|STAKE_DELEGATION|zkApp/');
+    await expect(typeBadge.first()).toBeVisible();
+  });
+
+  test('transaction not found shows error message', async ({ page }) => {
+    // Go to a non-existent transaction
+    await page.goto('/#/transaction/CkpInvalidTransactionHash12345');
+
+    // Should show error message
+    await expect(
+      page.locator('text=/not found|Transaction not found/i').first(),
+    ).toBeVisible({ timeout: 15000 });
+  });
+});

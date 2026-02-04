@@ -9,7 +9,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({
-  placeholder = 'Search by block height or state hash...',
+  placeholder = 'Search by block, account, or transaction...',
   className = '',
 }: SearchBarProps): ReactNode {
   const [query, setQuery] = useState('');
@@ -22,7 +22,7 @@ export function SearchBar({
 
     const result = parseQuery(query);
     if (result.type === 'unknown') {
-      setError('Invalid search query. Enter a block height or state hash.');
+      setError('Enter a block height, public key, or transaction hash.');
       return;
     }
 

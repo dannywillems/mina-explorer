@@ -1,4 +1,5 @@
 import { NETWORKS, DEFAULT_NETWORK } from '@/config';
+import { getClient } from './client';
 
 const NETWORK_KEY = 'mina-explorer-network';
 
@@ -170,4 +171,220 @@ export async function fetchPendingZkAppCommands(): Promise<
     }
     throw error;
   }
+}
+
+// Transaction detail types
+export interface TransactionDetail {
+  hash: string;
+  type: 'user_command' | 'zkapp_command';
+  status: 'pending' | 'confirmed';
+  blockHeight?: number;
+  blockStateHash?: string;
+  dateTime?: string;
+  // User command fields
+  kind?: string;
+  from?: string;
+  to?: string;
+  amount?: string;
+  fee: string;
+  memo?: string;
+  nonce?: number;
+  failureReason?: string | null | undefined;
+  // zkApp command fields
+  feePayer?: string;
+  accountUpdates?: number;
+}
+
+// Query to search for transactions in recent blocks
+const SEARCH_TRANSACTION_QUERY = `
+  query SearchTransaction($limit: Int!) {
+    blocks(
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      dateTime
+      transactions {
+        userCommands {
+          hash
+          kind
+          from
+          to
+          amount
+          fee
+          memo
+          nonce
+          failureReason
+        }
+        zkappCommands {
+          hash
+          failureReasons {
+            failures
+          }
+          zkappCommand {
+            memo
+            feePayer {
+              body {
+                publicKey
+                fee
+              }
+            }
+            accountUpdates {
+              body {
+                publicKey
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface SearchTransactionResponse {
+  blocks: Array<{
+    blockHeight: number;
+    stateHash: string;
+    dateTime: string;
+    transactions: {
+      userCommands: Array<{
+        hash: string;
+        kind: string;
+        from: string;
+        to: string;
+        amount: string;
+        fee: string;
+        memo: string;
+        nonce: number;
+        failureReason: string | null;
+      }>;
+      zkappCommands: Array<{
+        hash: string;
+        failureReasons: Array<{ failures: string[] }> | null;
+        zkappCommand: {
+          memo: string;
+          feePayer: {
+            body: {
+              publicKey: string;
+              fee: string;
+            };
+          };
+          accountUpdates: Array<{
+            body: {
+              publicKey: string;
+            };
+          }>;
+        };
+      }>;
+    };
+  }>;
+}
+
+/**
+ * Search for a transaction by hash
+ * First checks pending pool, then searches confirmed blocks
+ */
+export async function fetchTransactionByHash(
+  hash: string,
+): Promise<TransactionDetail | null> {
+  // First, try to find in pending transactions
+  try {
+    const pendingTxs = await fetchPendingTransactions();
+    const pendingTx = pendingTxs.find(tx => tx.hash === hash);
+    if (pendingTx) {
+      return {
+        hash: pendingTx.hash,
+        type: 'user_command',
+        status: 'pending',
+        kind: pendingTx.kind,
+        from: pendingTx.from,
+        to: pendingTx.to,
+        amount: pendingTx.amount,
+        fee: pendingTx.fee,
+        memo: pendingTx.memo,
+        nonce: pendingTx.nonce,
+      };
+    }
+  } catch {
+    // Daemon might not be available, continue to search archive
+  }
+
+  // Try to find in pending zkApp commands
+  try {
+    const pendingZkApps = await fetchPendingZkAppCommands();
+    const pendingZkApp = pendingZkApps.find(tx => tx.hash === hash);
+    if (pendingZkApp) {
+      return {
+        hash: pendingZkApp.hash,
+        type: 'zkapp_command',
+        status: 'pending',
+        feePayer: pendingZkApp.feePayer,
+        fee: pendingZkApp.fee,
+        memo: pendingZkApp.memo,
+      };
+    }
+  } catch {
+    // Daemon might not be available, continue to search archive
+  }
+
+  // Search in confirmed blocks (archive node)
+  const client = getClient();
+  try {
+    const data = await client.query<SearchTransactionResponse>(
+      SEARCH_TRANSACTION_QUERY,
+      { limit: 1000 },
+    );
+
+    for (const block of data.blocks) {
+      // Search in user commands
+      const userCmd = block.transactions.userCommands?.find(
+        tx => tx.hash === hash,
+      );
+      if (userCmd) {
+        return {
+          hash: userCmd.hash,
+          type: 'user_command',
+          status: 'confirmed',
+          blockHeight: block.blockHeight,
+          blockStateHash: block.stateHash,
+          dateTime: block.dateTime,
+          kind: userCmd.kind,
+          from: userCmd.from,
+          to: userCmd.to,
+          amount: userCmd.amount,
+          fee: userCmd.fee,
+          memo: userCmd.memo,
+          nonce: userCmd.nonce,
+          failureReason: userCmd.failureReason,
+        };
+      }
+
+      // Search in zkApp commands
+      const zkAppCmd = block.transactions.zkappCommands?.find(
+        tx => tx.hash === hash,
+      );
+      if (zkAppCmd) {
+        return {
+          hash: zkAppCmd.hash,
+          type: 'zkapp_command',
+          status: 'confirmed',
+          blockHeight: block.blockHeight,
+          blockStateHash: block.stateHash,
+          dateTime: block.dateTime,
+          feePayer: zkAppCmd.zkappCommand.feePayer.body.publicKey,
+          fee: zkAppCmd.zkappCommand.feePayer.body.fee,
+          memo: zkAppCmd.zkappCommand.memo,
+          accountUpdates: zkAppCmd.zkappCommand.accountUpdates?.length || 0,
+          failureReason: zkAppCmd.failureReasons
+            ?.flatMap(fr => fr.failures)
+            .join(', '),
+        };
+      }
+    }
+  } catch (error) {
+    console.error('[API] Error searching for transaction:', error);
+  }
+
+  return null;
 }

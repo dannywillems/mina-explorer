@@ -4,9 +4,10 @@ import {
   isValidBlockHash,
   isBlockHeight,
   isValidPublicKey,
+  isValidTransactionHash,
 } from '@/utils/formatters';
 
-type SearchType = 'block' | 'account' | 'unknown';
+type SearchType = 'block' | 'account' | 'transaction' | 'unknown';
 
 interface SearchResult {
   type: SearchType;
@@ -32,6 +33,10 @@ export function useSearch(): {
 
     if (isValidPublicKey(trimmed)) {
       return { type: 'account', path: `/account/${trimmed}` };
+    }
+
+    if (isValidTransactionHash(trimmed)) {
+      return { type: 'transaction', path: `/transaction/${trimmed}` };
     }
 
     return { type: 'unknown', path: '' };

@@ -11,4 +11,5 @@ export { useTopBlockProducers } from './useTopBlockProducers';
 export {
   usePendingTransactions,
   usePendingZkAppCommands,
+  useTransaction,
 } from './useTransactions';

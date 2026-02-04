@@ -55,6 +55,14 @@ export const FIXTURES = {
     // A known state hash
     known: '3NKeMoncuHab5ScarV5ViyF16cJPT4taWNSaTLS64Dp67wuXigPZ',
   },
+
+  // Transaction hashes from fixtures
+  transactions: {
+    // A known user command hash
+    userCommand: 'CkpZwt1Hy1Dv2HnKfBMwQJRj4hXBRfNVqy8xPZw2TnEq5wDKdJrWp',
+    // A known zkApp command hash
+    zkAppCommand: '5JuZkApp8jyKPXgVcNnQxD9JKMVLR4GzTxNHr6FqE3mYBdWy7ScPv',
+  },
 };
 
 // Raw fixture data for mocking API responses
