@@ -1,8 +1,9 @@
 import { getClient } from './client';
 import type { BlockSummary, BlockDetail, NetworkState } from '@/types';
 
-const BLOCKS_QUERY = `
-  query GetBlocks($limit: Int!) {
+// Full query with protocolState (for nodes that support it)
+const BLOCKS_QUERY_FULL = `
+  query GetBlocksFull($limit: Int!) {
     blocks(
       limit: $limit
       sortBy: BLOCKHEIGHT_DESC
@@ -18,6 +19,24 @@ const BLOCKS_QUERY = `
           slotSinceGenesis
         }
       }
+      transactions {
+        coinbase
+      }
+    }
+  }
+`;
+
+// Basic query without protocolState (for Mesa and other nodes)
+const BLOCKS_QUERY_BASIC = `
+  query GetBlocksBasic($limit: Int!) {
+    blocks(
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      creator
+      dateTime
       transactions {
         coinbase
       }
@@ -126,10 +145,22 @@ function mapApiBlockToDetail(block: ApiBlock): BlockDetail {
 
 export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
   const client = getClient();
-  const data = await client.query<BlocksResponse>(BLOCKS_QUERY, {
-    limit,
-  });
-  return data.blocks.map(mapApiBlockToSummary);
+
+  // Try full query first (with protocolState for epoch/slot info)
+  try {
+    const data = await client.query<BlocksResponse>(BLOCKS_QUERY_FULL, {
+      limit,
+    });
+    return data.blocks.map(mapApiBlockToSummary);
+  } catch (error) {
+    // If full query fails (e.g., Mesa doesn't support protocolState),
+    // fall back to basic query
+    console.log('[API] Full blocks query failed, trying basic query...');
+    const data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
+      limit,
+    });
+    return data.blocks.map(mapApiBlockToSummary);
+  }
 }
 
 export async function fetchBlockByHeight(
@@ -152,9 +183,19 @@ export async function fetchBlockByHash(
   // The API doesn't support querying by stateHash directly
   // We need to search through recent blocks
   const client = getClient();
-  const data = await client.query<BlocksResponse>(BLOCKS_QUERY, {
-    limit: 100,
-  });
+
+  let data: BlocksResponse;
+  try {
+    data = await client.query<BlocksResponse>(BLOCKS_QUERY_FULL, {
+      limit: 100,
+    });
+  } catch {
+    // Fallback to basic query
+    data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
+      limit: 100,
+    });
+  }
+
   const block = data.blocks.find(b => b.stateHash === stateHash);
   if (!block) {
     return null;

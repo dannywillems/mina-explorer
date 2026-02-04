@@ -29,31 +29,59 @@ export class GraphQLClient {
     query: string,
     variables?: Record<string, unknown>,
   ): Promise<T> {
-    const response = await fetch(this.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables,
-      }),
-    });
+    const queryName = this.extractQueryName(query);
+    console.log(`[API] ${queryName} → ${this.endpoint}`, variables || '');
 
-    if (!response.ok) {
-      throw new ApiError(
-        `HTTP error: ${response.status} ${response.statusText}`,
-      );
+    const startTime = performance.now();
+
+    try {
+      const response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
+      });
+
+      const duration = Math.round(performance.now() - startTime);
+
+      if (!response.ok) {
+        const errorMsg = `HTTP error: ${response.status} ${response.statusText}`;
+        console.error(`[API] ${queryName} FAILED (${duration}ms):`, errorMsg);
+        throw new ApiError(errorMsg);
+      }
+
+      const result = (await response.json()) as GraphQLResponse<T>;
+
+      if (result.errors && result.errors.length > 0) {
+        const errorMessages = result.errors.map(e => e.message).join(', ');
+        console.error(
+          `[API] ${queryName} FAILED (${duration}ms):`,
+          errorMessages,
+        );
+        throw new ApiError(`GraphQL error: ${errorMessages}`, result.errors);
+      }
+
+      console.log(`[API] ${queryName} OK (${duration}ms)`);
+      return result.data;
+    } catch (error) {
+      const duration = Math.round(performance.now() - startTime);
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      const errorMsg =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[API] ${queryName} FAILED (${duration}ms):`, errorMsg);
+      throw new ApiError(`Network error: ${errorMsg}`);
     }
+  }
 
-    const result = (await response.json()) as GraphQLResponse<T>;
-
-    if (result.errors && result.errors.length > 0) {
-      const errorMessages = result.errors.map(e => e.message).join(', ');
-      throw new ApiError(`GraphQL error: ${errorMessages}`, result.errors);
-    }
-
-    return result.data;
+  private extractQueryName(query: string): string {
+    const match = query.match(/(?:query|mutation)\s+(\w+)/);
+    return match ? match[1] : 'GraphQL';
   }
 }
 
