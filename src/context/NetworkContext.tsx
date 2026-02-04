@@ -3,6 +3,7 @@ import { NETWORKS, DEFAULT_NETWORK, type NetworkConfig } from '@/config';
 import { initClient, getClient } from '@/services/api';
 
 const CUSTOM_ENDPOINT_KEY = 'mina-explorer-custom-endpoint';
+const NETWORK_KEY = 'mina-explorer-network';
 
 interface NetworkContextValue {
   network: NetworkConfig;
@@ -18,6 +19,7 @@ function getInitialEndpoint(): {
   network: NetworkConfig;
   customEndpoint: string | null;
 } {
+  // Check for custom endpoint first
   const savedCustom = localStorage.getItem(CUSTOM_ENDPOINT_KEY);
   if (savedCustom) {
     return {
@@ -31,6 +33,16 @@ function getInitialEndpoint(): {
       customEndpoint: savedCustom,
     };
   }
+
+  // Check for saved network selection
+  const savedNetwork = localStorage.getItem(NETWORK_KEY);
+  if (savedNetwork && NETWORKS[savedNetwork]) {
+    return {
+      network: NETWORKS[savedNetwork],
+      customEndpoint: null,
+    };
+  }
+
   return {
     network: NETWORKS[DEFAULT_NETWORK],
     customEndpoint: null,
@@ -57,6 +69,7 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
       setNetworkState(newNetwork);
       setCustomEndpointState(null);
       localStorage.removeItem(CUSTOM_ENDPOINT_KEY);
+      localStorage.setItem(NETWORK_KEY, networkId);
       getClient().setEndpoint(newNetwork.endpoint);
     }
   };

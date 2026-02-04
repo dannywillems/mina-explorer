@@ -410,6 +410,73 @@ test.describe('Network Picker', () => {
     // Verify network switch triggered a response
     await expect(networkButton).toContainText('Devnet');
   });
+
+  test('network selection persists after page refresh', async ({ page }) => {
+    await page.goto('/');
+
+    // Switch to Mainnet
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    await dropdownMenu.locator('button:has-text("Mainnet")').click();
+    await expect(networkButton).toContainText('Mainnet');
+
+    // Refresh the page
+    await page.reload();
+
+    // Wait for page to load
+    await expect(page.locator('h1')).toContainText('Explorer');
+
+    // Verify Mainnet is still selected after refresh
+    await expect(networkButton).toContainText('Mainnet');
+  });
+
+  test('block height updates when switching networks', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for network stats to load on Mesa
+    const blockHeightCard = page
+      .locator('.card')
+      .filter({ hasText: 'Block Height' });
+    await expect(blockHeightCard).toBeVisible({ timeout: 15000 });
+    await expect(blockHeightCard.locator('h5')).not.toBeEmpty({
+      timeout: 15000,
+    });
+
+    // Get Mesa block height
+    const mesaHeight = await blockHeightCard.locator('h5').textContent();
+    console.log('Mesa block height:', mesaHeight);
+
+    // Switch to Devnet (which has much higher block height ~400k vs Mesa ~25k)
+    const networkButton = page.locator('button.dropdown-toggle');
+    await networkButton.click();
+
+    const dropdownMenu = page.locator('.dropdown-menu');
+    await expect(dropdownMenu).toBeVisible();
+
+    await dropdownMenu.locator('button:has-text("Devnet")').click();
+
+    // Wait for network stats to update
+    await expect(networkButton).toContainText('Devnet');
+
+    // Wait for the block height to change
+    // Poll until block height differs from Mesa's height
+    const blockHeightElement = blockHeightCard.locator('h5');
+    await expect(async () => {
+      const devnetHeight = await blockHeightElement.textContent();
+      expect(devnetHeight).not.toBe(mesaHeight);
+      expect(devnetHeight).not.toBe('-');
+    }).toPass({ timeout: 15000 });
+
+    const devnetHeight = await blockHeightElement.textContent();
+    console.log('Devnet block height:', devnetHeight);
+
+    // Devnet should have a different (higher) block height than Mesa
+    expect(devnetHeight).not.toBe(mesaHeight);
+  });
 });
 
 test.describe('Account Page', () => {

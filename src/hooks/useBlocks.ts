@@ -5,6 +5,7 @@ import {
   fetchBlockByHash,
   fetchNetworkState,
 } from '@/services/api';
+import { useNetwork } from './useNetwork';
 import type { BlockSummary, BlockDetail, NetworkState } from '@/types';
 
 interface UseBlocksResult {
@@ -15,6 +16,7 @@ interface UseBlocksResult {
 }
 
 export function useBlocks(limit: number = 25): UseBlocksResult {
+  const { network } = useNetwork();
   const [blocks, setBlocks] = useState<BlockSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +34,10 @@ export function useBlocks(limit: number = 25): UseBlocksResult {
     }
   }, [limit]);
 
+  // Refetch when network changes
   useEffect(() => {
     loadBlocks();
-  }, [loadBlocks]);
+  }, [loadBlocks, network.id]);
 
   return { blocks, loading, error, refresh: loadBlocks };
 }
@@ -46,6 +49,7 @@ interface UseBlockResult {
 }
 
 export function useBlock(identifier: string | number): UseBlockResult {
+  const { network } = useNetwork();
   const [block, setBlock] = useState<BlockDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +80,7 @@ export function useBlock(identifier: string | number): UseBlockResult {
     };
 
     loadBlock();
-  }, [identifier]);
+  }, [identifier, network.id]);
 
   return { block, loading, error };
 }
@@ -89,6 +93,7 @@ interface UseNetworkStateResult {
 }
 
 export function useNetworkState(): UseNetworkStateResult {
+  const { network } = useNetwork();
   const [networkState, setNetworkState] = useState<NetworkState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,9 +113,10 @@ export function useNetworkState(): UseNetworkStateResult {
     }
   }, []);
 
+  // Refetch when network changes
   useEffect(() => {
     loadNetworkState();
-  }, [loadNetworkState]);
+  }, [loadNetworkState, network.id]);
 
   return { networkState, loading, error, refresh: loadNetworkState };
 }

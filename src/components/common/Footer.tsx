@@ -20,7 +20,7 @@ export function Footer(): ReactNode {
                 rel="noopener noreferrer"
                 className="text-white"
               >
-                O(1) Labs
+                o1Labs
               </a>
             </p>
           </div>
