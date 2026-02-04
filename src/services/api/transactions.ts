@@ -195,8 +195,8 @@ export interface TransactionDetail {
   accountUpdates?: number;
 }
 
-// Query to search for transactions in recent blocks
-const SEARCH_TRANSACTION_QUERY = `
+// Query to search for transactions in recent blocks (full version with zkappCommands)
+const SEARCH_TRANSACTION_QUERY_FULL = `
   query SearchTransaction($limit: Int!) {
     blocks(
       limit: $limit
@@ -236,6 +236,33 @@ const SEARCH_TRANSACTION_QUERY = `
               }
             }
           }
+        }
+      }
+    }
+  }
+`;
+
+// Fallback query without zkappCommands (for endpoints that don't support it)
+const SEARCH_TRANSACTION_QUERY_BASIC = `
+  query SearchTransactionBasic($limit: Int!) {
+    blocks(
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      dateTime
+      transactions {
+        userCommands {
+          hash
+          kind
+          from
+          to
+          amount
+          fee
+          memo
+          nonce
+          failureReason
         }
       }
     }
@@ -330,12 +357,11 @@ export async function fetchTransactionByHash(
 
   // Search in confirmed blocks (archive node)
   const client = getClient();
-  try {
-    const data = await client.query<SearchTransactionResponse>(
-      SEARCH_TRANSACTION_QUERY,
-      { limit: 1000 },
-    );
 
+  // Helper to search blocks for the transaction
+  const searchBlocks = (
+    data: SearchTransactionResponse,
+  ): TransactionDetail | null => {
     for (const block of data.blocks) {
       // Search in user commands
       const userCmd = block.transactions.userCommands?.find(
@@ -360,7 +386,7 @@ export async function fetchTransactionByHash(
         };
       }
 
-      // Search in zkApp commands
+      // Search in zkApp commands (if available)
       const zkAppCmd = block.transactions.zkappCommands?.find(
         tx => tx.hash === hash,
       );
@@ -382,8 +408,39 @@ export async function fetchTransactionByHash(
         };
       }
     }
+    return null;
+  };
+
+  // Try full query first (with zkappCommands)
+  try {
+    const data = await client.query<SearchTransactionResponse>(
+      SEARCH_TRANSACTION_QUERY_FULL,
+      { limit: 1000 },
+    );
+    const result = searchBlocks(data);
+    if (result) return result;
   } catch (error) {
-    console.error('[API] Error searching for transaction:', error);
+    // Check if zkappCommands is not supported
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (
+      errorMessage.includes('zkappCommands') ||
+      errorMessage.includes('Cannot query field')
+    ) {
+      // Fall back to basic query without zkappCommands
+      console.log('[API] zkappCommands not supported, using basic query...');
+      try {
+        const data = await client.query<SearchTransactionResponse>(
+          SEARCH_TRANSACTION_QUERY_BASIC,
+          { limit: 1000 },
+        );
+        const result = searchBlocks(data);
+        if (result) return result;
+      } catch (basicError) {
+        console.error('[API] Error with basic transaction search:', basicError);
+      }
+    } else {
+      console.error('[API] Error searching for transaction:', error);
+    }
   }
 
   return null;
@@ -413,12 +470,8 @@ export async function fetchAccountTransactions(
   const client = getClient();
   const transactions: AccountTransaction[] = [];
 
-  try {
-    const data = await client.query<SearchTransactionResponse>(
-      SEARCH_TRANSACTION_QUERY,
-      { limit },
-    );
-
+  // Helper to extract transactions from blocks
+  const extractTransactions = (data: SearchTransactionResponse): void => {
     for (const block of data.blocks) {
       // Check user commands
       for (const cmd of block.transactions.userCommands || []) {
@@ -449,7 +502,7 @@ export async function fetchAccountTransactions(
         }
       }
 
-      // Check zkApp commands
+      // Check zkApp commands (if available)
       for (const cmd of block.transactions.zkappCommands || []) {
         const feePayer = cmd.zkappCommand.feePayer.body.publicKey;
         const affectedAccounts = cmd.zkappCommand.accountUpdates?.map(
@@ -469,8 +522,41 @@ export async function fetchAccountTransactions(
         }
       }
     }
+  };
+
+  // Try full query first
+  try {
+    const data = await client.query<SearchTransactionResponse>(
+      SEARCH_TRANSACTION_QUERY_FULL,
+      { limit },
+    );
+    extractTransactions(data);
   } catch (error) {
-    console.error('[API] Error fetching account transactions:', error);
+    // Check if zkappCommands is not supported
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (
+      errorMessage.includes('zkappCommands') ||
+      errorMessage.includes('Cannot query field')
+    ) {
+      // Fall back to basic query
+      console.log(
+        '[API] zkappCommands not supported, using basic query for account transactions...',
+      );
+      try {
+        const data = await client.query<SearchTransactionResponse>(
+          SEARCH_TRANSACTION_QUERY_BASIC,
+          { limit },
+        );
+        extractTransactions(data);
+      } catch (basicError) {
+        console.error(
+          '[API] Error with basic account transactions:',
+          basicError,
+        );
+      }
+    } else {
+      console.error('[API] Error fetching account transactions:', error);
+    }
   }
 
   // Sort by block height descending (newest first)

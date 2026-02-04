@@ -66,9 +66,52 @@ function TransactionDetail({
 
   if (!transaction) {
     return (
-      <div className="rounded-md bg-warning/10 p-4 text-sm text-warning">
-        Transaction not found. It may not exist or is older than the search
-        range.
+      <div className="space-y-4">
+        <div className="rounded-md bg-yellow-500/10 p-4">
+          <h3 className="font-semibold text-yellow-700 dark:text-yellow-400">
+            Transaction Not Found
+          </h3>
+          <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-300">
+            The transaction with this hash could not be found.
+          </p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h4 className="font-medium">Possible reasons:</h4>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
+            <li>
+              The transaction may be older than the search range (last 1,000
+              blocks)
+            </li>
+            <li>The transaction hash may be incorrect or incomplete</li>
+            <li>
+              The transaction may still be pending and not yet included in a
+              block
+            </li>
+            <li>
+              zkApp transactions may not be available on the current network
+              endpoint
+            </li>
+          </ul>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/50 p-4">
+          <h4 className="font-medium">Technical Details</h4>
+          <div className="mt-2 space-y-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">Query:</span>{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                SearchTransaction (last 1,000 blocks)
+              </code>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Searched in:</span>{' '}
+              <span>Pending pool (daemon) and confirmed blocks (archive)</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Result:</span>{' '}
+              <span className="text-destructive">Not found</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

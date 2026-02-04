@@ -91,10 +91,32 @@ export function ZkAppsPage(): ReactNode {
 
       try {
         const client = getClient();
-        const data = await client.query<ZkAppActivityResponse>(
-          ZKAPP_ACTIVITY_QUERY,
-          { limit: 500 },
-        );
+        let data: ZkAppActivityResponse;
+
+        try {
+          data = await client.query<ZkAppActivityResponse>(
+            ZKAPP_ACTIVITY_QUERY,
+            { limit: 500 },
+          );
+        } catch (queryError) {
+          // Check if the error is about zkappCommands not being available
+          const errorMessage =
+            queryError instanceof Error ? queryError.message : '';
+          if (
+            errorMessage.includes('zkappCommands') ||
+            errorMessage.includes('Cannot query field')
+          ) {
+            // zkappCommands not supported on this network/endpoint
+            setActivities([]);
+            setZkApps([]);
+            setError(
+              'zkApp data is not available on the current network endpoint. ' +
+                'Try switching to a different network or endpoint that supports zkApp queries.',
+            );
+            return;
+          }
+          throw queryError;
+        }
 
         // Extract zkApp activities from blocks
         const allActivities: ZkAppActivity[] = [];

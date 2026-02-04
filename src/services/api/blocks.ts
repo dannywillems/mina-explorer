@@ -602,15 +602,16 @@ export async function fetchTopBlockProducers(
 // GraphQL query:
 //   query GetBlocksByDateRange($startDate: DateTime!, $endDate: DateTime!, $limit: Int!) {
 //     blocks(
-//       query: { dateTime_gte: $startDate, dateTime_lte: $endDate }
+//       query: { dateTime_gte: $startDate, dateTime_lt: $endDate }
 //       limit: $limit
 //       sortBy: BLOCKHEIGHT_DESC
 //     ) { creator, blockHeight, dateTime }
 //   }
+// Note: API uses dateTime_lt (not dateTime_lte)
 const BLOCKS_BY_DATE_QUERY = `
   query GetBlocksByDateRange($startDate: DateTime!, $endDate: DateTime!, $limit: Int!) {
     blocks(
-      query: { dateTime_gte: $startDate, dateTime_lte: $endDate }
+      query: { dateTime_gte: $startDate, dateTime_lt: $endDate }
       limit: $limit
       sortBy: BLOCKHEIGHT_DESC
     ) {
