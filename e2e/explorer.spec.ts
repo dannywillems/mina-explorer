@@ -644,3 +644,120 @@ test.describe('Transaction Search', () => {
     ).toBeVisible({ timeout: 15000 });
   });
 });
+
+test.describe('Account Transaction History', () => {
+  test('account page shows transaction history section', async ({ page }) => {
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for account to load
+    await expect(
+      page.getByRole('heading', { name: 'Account', exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+
+    // Check for Transaction History section
+    await expect(
+      page.getByRole('heading', { name: 'Transaction History' }),
+    ).toBeVisible({ timeout: 10000 });
+  });
+
+  test('transaction history shows transaction count', async ({ page }) => {
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for account to load
+    await expect(
+      page.getByRole('heading', { name: 'Account', exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+
+    // Check for transaction count text
+    await expect(page.locator('text=/\\d+ transactions found/')).toBeVisible({
+      timeout: 10000,
+    });
+  });
+});
+
+test.describe('Block List Snark Fees', () => {
+  test('blocks table shows snark fees column', async ({ page }) => {
+    await page.goto('/#/blocks');
+
+    // Wait for blocks to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Check for Snark Fees column header
+    await expect(page.locator('th').filter({ hasText: 'Snark Fees' })).toBeVisible();
+  });
+
+  test('blocks display snark fee values', async ({ page }) => {
+    await page.goto('/#/blocks');
+
+    // Wait for blocks to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Check that there are rows with MINA values in the snark fees column
+    // The table should have at least one row with data
+    const rows = page.locator('tbody tr');
+    await expect(rows.first()).toBeVisible();
+
+    // Snark fees column should contain values (can be 0 MINA)
+    const snarkFeeCells = page.locator('tbody tr td:nth-child(6)');
+    await expect(snarkFeeCells.first()).toBeVisible();
+  });
+});
+
+test.describe('Staking Page', () => {
+  test('staking page loads and shows block producers', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Check page title
+    await expect(page.locator('h1')).toContainText('Block Producers');
+
+    // Wait for producers to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Check for table headers
+    await expect(page.locator('th').filter({ hasText: 'Rank' })).toBeVisible();
+    await expect(
+      page.locator('th').filter({ hasText: 'Block Producer' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('th').filter({ hasText: 'Blocks Produced' }),
+    ).toBeVisible();
+    await expect(page.locator('th').filter({ hasText: 'Share' })).toBeVisible();
+  });
+
+  test('staking page shows active producers count', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Wait for stats to load
+    await expect(page.locator('text=Active Producers')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Should show a number for active producers
+    const statsCard = page
+      .locator('div')
+      .filter({ hasText: /Active Producers/ })
+      .first();
+    await expect(statsCard).toBeVisible();
+  });
+
+  test('staking page navigation link works', async ({ page }) => {
+    await page.goto('/');
+
+    // Click staking link in navigation
+    await page.locator('nav a').filter({ hasText: 'Staking' }).first().click();
+
+    // Should navigate to staking page
+    await expect(page).toHaveURL(/\/staking/);
+    await expect(page.locator('h1')).toContainText('Block Producers');
+  });
+
+  test('staking page shows top producer badge', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Wait for table to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Check for "Top Producer" badge on first row
+    await expect(page.locator('text=Top Producer')).toBeVisible();
+  });
+});
