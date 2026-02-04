@@ -17,11 +17,11 @@ export interface Account {
 }
 
 export interface AccountTiming {
-  initialMinimumBalance: string;
-  cliffTime: number;
-  cliffAmount: string;
-  vestingPeriod: number;
-  vestingIncrement: string;
+  initialMinimumBalance: string | null;
+  cliffTime: number | null;
+  cliffAmount: string | null;
+  vestingPeriod: number | null;
+  vestingIncrement: string | null;
 }
 
 export interface AccountPermissions {
@@ -31,7 +31,8 @@ export interface AccountPermissions {
   receive: string;
   setDelegate: string;
   setPermissions: string;
-  setVerificationKey: string;
+  // setVerificationKey can be a string or an object with auth requirements
+  setVerificationKey: string | Record<string, unknown>;
   setZkappUri: string;
   editActionState: string;
   setTokenSymbol: string;

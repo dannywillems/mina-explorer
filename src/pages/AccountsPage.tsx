@@ -4,19 +4,11 @@ import { Search } from 'lucide-react';
 import { isValidPublicKey, formatHash } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
-// Notable accounts / whales for easy access
+// Notable accounts / whales for easy access (mainnet)
 const NOTABLE_ACCOUNTS = [
-  {
-    name: 'Mina Foundation',
-    publicKey: 'B62qnLVz8wM7MfJsuYbjFf4UWbwrUBEL5ZdawExxxHvXL3nwGA8uK94',
-  },
   {
     name: 'o1Labs',
     publicKey: 'B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg',
-  },
-  {
-    name: 'Auro Wallet',
-    publicKey: 'B62qjsV6WQwTeEWrNrRRBP6VaaLvQhwWTnFi4WP4LQjGvpfZEumXzxb',
   },
   {
     name: 'Binance',

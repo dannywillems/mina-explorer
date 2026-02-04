@@ -186,27 +186,39 @@ export function AccountDetail({
                     <span className="text-muted-foreground">
                       Initial Minimum Balance
                     </span>
-                    <Amount value={account.timing.initialMinimumBalance} />
+                    {account.timing.initialMinimumBalance ? (
+                      <Amount value={account.timing.initialMinimumBalance} />
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between border-b border-border pb-2">
                     <span className="text-muted-foreground">Cliff Time</span>
-                    <span>{account.timing.cliffTime}</span>
+                    <span>{account.timing.cliffTime ?? 'N/A'}</span>
                   </div>
                   <div className="flex items-center justify-between border-b border-border pb-2">
                     <span className="text-muted-foreground">Cliff Amount</span>
-                    <Amount value={account.timing.cliffAmount} />
+                    {account.timing.cliffAmount ? (
+                      <Amount value={account.timing.cliffAmount} />
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between border-b border-border pb-2">
                     <span className="text-muted-foreground">
                       Vesting Period
                     </span>
-                    <span>{account.timing.vestingPeriod}</span>
+                    <span>{account.timing.vestingPeriod ?? 'N/A'}</span>
                   </div>
                   <div className="flex items-center justify-between border-b border-border pb-2">
                     <span className="text-muted-foreground">
                       Vesting Increment
                     </span>
-                    <Amount value={account.timing.vestingIncrement} />
+                    {account.timing.vestingIncrement ? (
+                      <Amount value={account.timing.vestingIncrement} />
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
                   </div>
                 </div>
               </div>

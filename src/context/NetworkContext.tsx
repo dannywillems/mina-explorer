@@ -27,7 +27,8 @@ function getInitialEndpoint(): {
         id: 'custom',
         name: 'custom',
         displayName: 'Custom',
-        endpoint: savedCustom,
+        archiveEndpoint: savedCustom,
+        daemonEndpoint: savedCustom,
         isTestnet: true,
       },
       customEndpoint: savedCustom,
@@ -51,7 +52,7 @@ function getInitialEndpoint(): {
 
 // Initialize client immediately with default or saved custom endpoint
 const initial = getInitialEndpoint();
-initClient(initial.network.endpoint);
+initClient(initial.network.archiveEndpoint);
 
 interface NetworkProviderProps {
   children: ReactNode;
@@ -70,7 +71,7 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
       setCustomEndpointState(null);
       localStorage.removeItem(CUSTOM_ENDPOINT_KEY);
       localStorage.setItem(NETWORK_KEY, networkId);
-      getClient().setEndpoint(newNetwork.endpoint);
+      getClient().setEndpoint(newNetwork.archiveEndpoint);
     }
   };
 
@@ -80,7 +81,8 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
         id: 'custom',
         name: 'custom',
         displayName: 'Custom',
-        endpoint: endpoint,
+        archiveEndpoint: endpoint,
+        daemonEndpoint: endpoint,
         isTestnet: true,
       };
       setNetworkState(customNetwork);

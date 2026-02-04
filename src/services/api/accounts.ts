@@ -1,19 +1,33 @@
-import { getClient } from './client';
 import type { Account } from '@/types';
+import { NETWORKS, DEFAULT_NETWORK } from '@/config';
 
-const ACCOUNT_QUERY = `
-  query GetAccount($publicKey: String!) {
-    account(query: { publicKey: $publicKey }) {
+const NETWORK_KEY = 'mina-explorer-network';
+
+function getDaemonEndpoint(): string {
+  const savedNetwork = localStorage.getItem(NETWORK_KEY);
+  const networkId = savedNetwork && NETWORKS[savedNetwork] ? savedNetwork : DEFAULT_NETWORK;
+  return NETWORKS[networkId].daemonEndpoint;
+}
+
+// Daemon GraphQL query for account data
+// Note: The daemon uses PublicKey scalar type, not String
+const DAEMON_ACCOUNT_QUERY = `
+  query GetAccount($publicKey: PublicKey!) {
+    account(publicKey: $publicKey) {
       publicKey
       balance {
         total
-        liquid
-        locked
+        blockHeight
       }
       nonce
       delegate
       votingFor
       receiptChainHash
+      tokenId
+      tokenSymbol
+      zkappUri
+      zkappState
+      provedState
       timing {
         initialMinimumBalance
         cliffTime
@@ -36,17 +50,14 @@ const ACCOUNT_QUERY = `
         setVotingFor
         setTiming
       }
-      zkappState
-      zkappUri
-      tokenSymbol
     }
   }
 `;
 
-// Simplified query in case the full query doesn't work
-const ACCOUNT_SIMPLE_QUERY = `
-  query GetAccount($publicKey: String!) {
-    account(query: { publicKey: $publicKey }) {
+// Simplified query for basic account info
+const DAEMON_ACCOUNT_SIMPLE_QUERY = `
+  query GetAccount($publicKey: PublicKey!) {
+    account(publicKey: $publicKey) {
       publicKey
       balance {
         total
@@ -57,33 +68,147 @@ const ACCOUNT_SIMPLE_QUERY = `
   }
 `;
 
-interface AccountResponse {
-  account: Account | null;
+interface DaemonAccountResponse {
+  account: {
+    publicKey: string;
+    balance: {
+      total: string;
+      blockHeight?: string;
+    };
+    nonce: string;
+    delegate: string | null;
+    votingFor: string | null;
+    receiptChainHash: string | null;
+    tokenId: string | null;
+    tokenSymbol: string | null;
+    zkappUri: string | null;
+    zkappState: string[] | null;
+    provedState: boolean | null;
+    timing: {
+      initialMinimumBalance: string;
+      cliffTime: string;
+      cliffAmount: string;
+      vestingPeriod: string;
+      vestingIncrement: string;
+    } | null;
+    permissions: {
+      editState: string;
+      access: string;
+      send: string;
+      receive: string;
+      setDelegate: string;
+      setPermissions: string;
+      setVerificationKey: string | Record<string, unknown>;
+      setZkappUri: string;
+      editActionState: string;
+      setTokenSymbol: string;
+      incrementNonce: string;
+      setVotingFor: string;
+      setTiming: string;
+    } | null;
+  } | null;
+}
+
+interface GraphQLResponse<T> {
+  data?: T;
+  errors?: Array<{ message: string }>;
+}
+
+async function queryDaemon<T>(
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const endpoint = getDaemonEndpoint();
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const result = (await response.json()) as GraphQLResponse<T>;
+
+  if (result.errors && result.errors.length > 0) {
+    const errorMessages = result.errors.map(e => e.message).join(', ');
+    throw new Error(`GraphQL error: ${errorMessages}`);
+  }
+
+  if (!result.data) {
+    throw new Error('No data in response');
+  }
+
+  return result.data;
+}
+
+function transformDaemonAccount(daemonAccount: DaemonAccountResponse['account']): Account | null {
+  if (!daemonAccount) {
+    return null;
+  }
+
+  // Check if timing has any non-null values
+  const hasTimingData = daemonAccount.timing &&
+    (daemonAccount.timing.initialMinimumBalance !== null ||
+     daemonAccount.timing.cliffTime !== null);
+
+  return {
+    publicKey: daemonAccount.publicKey,
+    balance: {
+      total: daemonAccount.balance.total,
+      liquid: null, // Daemon doesn't provide liquid/locked breakdown directly
+      locked: null,
+    },
+    nonce: parseInt(daemonAccount.nonce, 10),
+    delegate: daemonAccount.delegate,
+    votingFor: daemonAccount.votingFor,
+    receiptChainHash: daemonAccount.receiptChainHash,
+    timing: hasTimingData && daemonAccount.timing ? {
+      initialMinimumBalance: daemonAccount.timing.initialMinimumBalance,
+      cliffTime: daemonAccount.timing.cliffTime
+        ? parseInt(daemonAccount.timing.cliffTime, 10)
+        : null,
+      cliffAmount: daemonAccount.timing.cliffAmount,
+      vestingPeriod: daemonAccount.timing.vestingPeriod
+        ? parseInt(daemonAccount.timing.vestingPeriod, 10)
+        : null,
+      vestingIncrement: daemonAccount.timing.vestingIncrement,
+    } : null,
+    permissions: daemonAccount.permissions,
+    zkappState: daemonAccount.zkappState,
+    zkappUri: daemonAccount.zkappUri,
+    tokenSymbol: daemonAccount.tokenSymbol,
+  };
 }
 
 export async function fetchAccount(publicKey: string): Promise<Account | null> {
-  const client = getClient();
-
   // Try the full query first
   try {
-    const data = await client.query<AccountResponse>(ACCOUNT_QUERY, {
-      publicKey,
-    });
-    return data.account;
-  } catch {
+    const data = await queryDaemon<DaemonAccountResponse>(
+      DAEMON_ACCOUNT_QUERY,
+      { publicKey },
+    );
+    return transformDaemonAccount(data.account);
+  } catch (fullQueryError) {
     // Fall back to simple query
     try {
-      const data = await client.query<AccountResponse>(ACCOUNT_SIMPLE_QUERY, {
-        publicKey,
-      });
+      const data = await queryDaemon<DaemonAccountResponse>(
+        DAEMON_ACCOUNT_SIMPLE_QUERY,
+        { publicKey },
+      );
       if (data.account) {
         return {
-          ...data.account,
+          publicKey: data.account.publicKey,
           balance: {
             total: data.account.balance.total,
             liquid: null,
             locked: null,
           },
+          nonce: parseInt(data.account.nonce, 10),
+          delegate: data.account.delegate,
           votingFor: null,
           receiptChainHash: null,
           timing: null,
@@ -95,7 +220,8 @@ export async function fetchAccount(publicKey: string): Promise<Account | null> {
       }
       return null;
     } catch {
-      return null;
+      // Re-throw the original error for better debugging
+      throw fullQueryError;
     }
   }
 }
