@@ -54,6 +54,31 @@ const BLOCKS_QUERY_BASIC = `
   }
 `;
 
+// Paginated query with maxBlockHeight filter
+const BLOCKS_QUERY_PAGINATED = `
+  query GetBlocksPaginated($limit: Int!, $maxBlockHeight: Int!) {
+    blocks(
+      query: { blockHeight_lt: $maxBlockHeight }
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      creator
+      dateTime
+      transactions {
+        coinbase
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
+        pendingMaxBlockHeight
+      }
+    }
+  }
+`;
+
 const BLOCK_BY_HEIGHT_QUERY = `
   query GetBlockByHeight($blockHeightGte: Int!, $blockHeightLt: Int!) {
     blocks(
@@ -169,6 +194,13 @@ function mapApiBlockToDetail(
   };
 }
 
+export interface BlocksPage {
+  blocks: BlockSummary[];
+  hasMore: boolean;
+  nextCursor: number | null;
+  totalBlockHeight: number;
+}
+
 export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
   const client = getClient();
 
@@ -191,6 +223,64 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
       data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
     return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
   }
+}
+
+interface PaginatedBlocksResponse {
+  blocks: ApiBlock[];
+  networkState: {
+    maxBlockHeight: {
+      canonicalMaxBlockHeight: number;
+      pendingMaxBlockHeight: number;
+    };
+  };
+}
+
+export async function fetchBlocksPaginated(
+  limit: number = 25,
+  beforeHeight?: number,
+): Promise<BlocksPage> {
+  const client = getClient();
+
+  // If no cursor, get the latest blocks
+  if (!beforeHeight) {
+    const data = await client.query<PaginatedBlocksResponse>(
+      BLOCKS_QUERY_BASIC,
+      { limit },
+    );
+    const canonicalMax =
+      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+    const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
+    const blocks = data.blocks.map(block =>
+      mapApiBlockToSummary(block, canonicalMax),
+    );
+    const lastBlock = blocks[blocks.length - 1];
+
+    return {
+      blocks,
+      hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
+      nextCursor: lastBlock ? lastBlock.blockHeight : null,
+      totalBlockHeight: totalHeight,
+    };
+  }
+
+  // Paginated query
+  const data = await client.query<PaginatedBlocksResponse>(
+    BLOCKS_QUERY_PAGINATED,
+    { limit, maxBlockHeight: beforeHeight },
+  );
+  const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+  const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
+  const blocks = data.blocks.map(block =>
+    mapApiBlockToSummary(block, canonicalMax),
+  );
+  const lastBlock = blocks[blocks.length - 1];
+
+  return {
+    blocks,
+    hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
+    nextCursor: lastBlock ? lastBlock.blockHeight : null,
+    totalBlockHeight: totalHeight,
+  };
 }
 
 export async function fetchBlockByHeight(
