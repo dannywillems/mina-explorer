@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchBar } from './SearchBar';
 import { NetworkSelector } from './NetworkSelector';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Header(): ReactNode {
   return (
@@ -48,8 +49,9 @@ export function Header(): ReactNode {
             </li>
           </ul>
 
-          <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center gap-2">
             <SearchBar className="d-none d-lg-block" />
+            <ThemeToggle />
             <NetworkSelector />
           </div>
         </div>

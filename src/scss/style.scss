@@ -111,3 +111,18 @@ body {
     }
   }
 }
+
+// Footer link hover effect
+footer .link-hover:hover {
+  opacity: 1 !important;
+  text-decoration: underline !important;
+}
+
+// Theme toggle button
+.btn-link.nav-link {
+  color: rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    color: #fff;
+  }
+}

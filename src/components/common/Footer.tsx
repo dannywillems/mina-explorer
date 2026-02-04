@@ -8,31 +8,31 @@ export function Footer(): ReactNode {
       <div className="container">
         <div className="row">
           <div className="col-md-4 mb-3 mb-md-0">
-            <h5 className="mb-3">Mina Explorer</h5>
-            <p className="text-muted small mb-2">
+            <h5 className="mb-3 text-white">Mina Explorer</h5>
+            <p className="text-light opacity-75 small mb-2">
               Open-source blockchain explorer for the Mina Protocol network.
             </p>
-            <p className="text-muted small mb-0">
+            <p className="text-light opacity-75 small mb-0">
               Built by{' '}
               <a
                 href="https://o1labs.org"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-light"
+                className="text-white"
               >
                 O(1) Labs
               </a>
             </p>
           </div>
           <div className="col-md-4 mb-3 mb-md-0">
-            <h6 className="text-muted mb-3">Resources</h6>
+            <h6 className="text-light opacity-75 mb-3">Resources</h6>
             <ul className="list-unstyled small">
               <li className="mb-2">
                 <a
                   href="https://minaprotocol.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Mina Protocol
                 </a>
@@ -42,7 +42,7 @@ export function Footer(): ReactNode {
                   href="https://docs.minaprotocol.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Documentation
                 </a>
@@ -52,7 +52,7 @@ export function Footer(): ReactNode {
                   href="https://github.com/MinaProtocol/mina"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Mina GitHub
                 </a>
@@ -60,14 +60,14 @@ export function Footer(): ReactNode {
             </ul>
           </div>
           <div className="col-md-4">
-            <h6 className="text-muted mb-3">Connect</h6>
+            <h6 className="text-light opacity-75 mb-3">Connect</h6>
             <ul className="list-unstyled small">
               <li className="mb-2">
                 <a
                   href="https://github.com/dannywillems/mina-explorer"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Explorer GitHub
                 </a>
@@ -77,7 +77,7 @@ export function Footer(): ReactNode {
                   href="https://discord.gg/minaprotocol"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Discord
                 </a>
@@ -87,7 +87,7 @@ export function Footer(): ReactNode {
                   href="https://twitter.com/MinaProtocol"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted text-decoration-none"
+                  className="text-light opacity-75 text-decoration-none link-hover"
                 >
                   Twitter
                 </a>
@@ -98,7 +98,7 @@ export function Footer(): ReactNode {
         <hr className="my-3 border-secondary" />
         <div className="row">
           <div className="col-12 text-center">
-            <p className="text-muted small mb-0">
+            <p className="text-light opacity-50 small mb-0">
               &copy; {currentYear} Mina Explorer. Open source under MIT License.
             </p>
           </div>
