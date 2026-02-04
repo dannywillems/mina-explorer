@@ -69,10 +69,10 @@ export function BlockList({
                   {!block.canonical && (
                     <span
                       className="inline-flex items-center gap-1 rounded bg-yellow-500/10 px-1.5 py-0.5 text-xs text-yellow-600 dark:text-yellow-400"
-                      title="This block is not on the canonical chain"
+                      title="This block is pending finalization"
                     >
                       <AlertTriangle size={12} />
-                      Orphaned
+                      Pending
                     </span>
                   )}
                 </div>

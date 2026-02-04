@@ -1,7 +1,7 @@
 import { getClient } from './client';
 import type { BlockSummary, BlockDetail, NetworkState } from '@/types';
 
-// Full query with protocolState (for nodes that support it)
+// Full query with protocolState and networkState (for nodes that support it)
 const BLOCKS_QUERY_FULL = `
   query GetBlocksFull($limit: Int!) {
     blocks(
@@ -12,7 +12,6 @@ const BLOCKS_QUERY_FULL = `
       stateHash
       creator
       dateTime
-      canonical
       protocolState {
         consensusState {
           epoch
@@ -22,6 +21,11 @@ const BLOCKS_QUERY_FULL = `
       }
       transactions {
         coinbase
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
       }
     }
   }
@@ -38,9 +42,13 @@ const BLOCKS_QUERY_BASIC = `
       stateHash
       creator
       dateTime
-      canonical
       transactions {
         coinbase
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
       }
     }
   }
@@ -56,9 +64,13 @@ const BLOCK_BY_HEIGHT_QUERY = `
       stateHash
       creator
       dateTime
-      canonical
       transactions {
         coinbase
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
       }
     }
   }
@@ -80,7 +92,6 @@ interface ApiBlock {
   stateHash: string;
   creator: string;
   dateTime: string;
-  canonical: boolean;
   protocolState?: {
     consensusState: {
       epoch: number;
@@ -95,13 +106,21 @@ interface ApiBlock {
 
 interface BlocksResponse {
   blocks: ApiBlock[];
+  networkState: {
+    maxBlockHeight: {
+      canonicalMaxBlockHeight: number;
+    };
+  };
 }
 
 interface NetworkStateResponse {
   networkState: NetworkState;
 }
 
-function mapApiBlockToSummary(block: ApiBlock): BlockSummary {
+function mapApiBlockToSummary(
+  block: ApiBlock,
+  canonicalMaxBlockHeight: number,
+): BlockSummary {
   return {
     blockHeight: block.blockHeight,
     stateHash: block.stateHash,
@@ -109,7 +128,7 @@ function mapApiBlockToSummary(block: ApiBlock): BlockSummary {
     dateTime: block.dateTime,
     txFees: '0',
     snarkFees: '0',
-    canonical: block.canonical,
+    canonical: block.blockHeight <= canonicalMaxBlockHeight,
     coinbase: block.transactions.coinbase,
     epoch: block.protocolState?.consensusState.epoch,
     slot: block.protocolState?.consensusState.slot,
@@ -117,7 +136,10 @@ function mapApiBlockToSummary(block: ApiBlock): BlockSummary {
   };
 }
 
-function mapApiBlockToDetail(block: ApiBlock): BlockDetail {
+function mapApiBlockToDetail(
+  block: ApiBlock,
+  canonicalMaxBlockHeight: number,
+): BlockDetail {
   return {
     blockHeight: block.blockHeight,
     stateHash: block.stateHash,
@@ -127,7 +149,7 @@ function mapApiBlockToDetail(block: ApiBlock): BlockDetail {
     dateTime: block.dateTime,
     txFees: '0',
     snarkFees: '0',
-    canonical: block.canonical,
+    canonical: block.blockHeight <= canonicalMaxBlockHeight,
     receivedTime: block.dateTime,
     winnerAccount: { publicKey: block.creator },
     protocolState: {
@@ -155,7 +177,9 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
     const data = await client.query<BlocksResponse>(BLOCKS_QUERY_FULL, {
       limit,
     });
-    return data.blocks.map(mapApiBlockToSummary);
+    const canonicalMax =
+      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+    return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
   } catch (error) {
     // If full query fails (e.g., Mesa doesn't support protocolState),
     // fall back to basic query
@@ -163,7 +187,9 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
     const data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
       limit,
     });
-    return data.blocks.map(mapApiBlockToSummary);
+    const canonicalMax =
+      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+    return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
   }
 }
 
@@ -178,7 +204,8 @@ export async function fetchBlockByHeight(
   if (data.blocks.length === 0) {
     return null;
   }
-  return mapApiBlockToDetail(data.blocks[0]);
+  const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+  return mapApiBlockToDetail(data.blocks[0], canonicalMax);
 }
 
 export async function fetchBlockByHash(
@@ -204,7 +231,8 @@ export async function fetchBlockByHash(
   if (!block) {
     return null;
   }
-  return mapApiBlockToDetail(block);
+  const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+  return mapApiBlockToDetail(block, canonicalMax);
 }
 
 export async function fetchNetworkState(): Promise<NetworkState> {

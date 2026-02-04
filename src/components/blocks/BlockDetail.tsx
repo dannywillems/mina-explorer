@@ -52,7 +52,7 @@ export function BlockDetail({
                 : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
             )}
           >
-            {block.canonical ? 'Canonical' : 'Orphaned'}
+            {block.canonical ? 'Canonical' : 'Pending'}
           </span>
         </div>
         <button
