@@ -43,6 +43,26 @@ test.describe('Mina Explorer', () => {
     expect(blockHeightText).toMatch(/[\d,]+/);
   });
 
+  test('epoch and slot progress displayed', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for network stats to load
+    await expect(page.locator('text=Block Height').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check that Epoch section exists
+    await expect(page.locator('text=Epoch').first()).toBeVisible();
+
+    // Wait for epoch data to load (should show a number, not '-')
+    // The epoch number should be visible
+    const epochCard = page.locator('div').filter({ hasText: /^Epoch/ }).first();
+    await expect(epochCard).toBeVisible();
+
+    // Check for slot progress text (shows "X / 7,140 slots")
+    await expect(page.locator('text=/slots/')).toBeVisible({ timeout: 10000 });
+  });
+
   test('recent blocks load', async ({ page }) => {
     await page.goto('/');
 
