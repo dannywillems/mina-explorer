@@ -21,6 +21,26 @@
               "fee": "50000000",
               "type": "Fee_transfer"
             }
+          ],
+          "zkappCommands": [
+            {
+              "hash": "5JuZkApp1jyKPXgVcNnQxD9JKMVLR4GzTxNHr6FqE3mYBdWy7ScPv",
+              "zkappCommand": {
+                "memo": "emtBcHAgdHJhbnNhY3Rpb24=",
+                "feePayer": {
+                  "body": {
+                    "publicKey": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg"
+                  }
+                },
+                "accountUpdates": [
+                  {
+                    "body": {
+                      "publicKey": "B62qpge4uMq4Vv5Rvc8Gw9qSquUYd6xoW1pz7HQkMSHm6h1o7pvLPAN"
+                    }
+                  }
+                ]
+              }
+            }
           ]
         }
       },
@@ -48,6 +68,26 @@
               "recipient": "B62qnzkS7LNoSMY5fZ7zWTCDcKDqWvJU5MvLQrWV8VFCuRYEbGcR4P9",
               "fee": "25000000",
               "type": "Fee_transfer"
+            }
+          ],
+          "zkappCommands": [
+            {
+              "hash": "5JuZkApp2jyKPXgVcNnQxD9JKMVLR4GzTxNHr6FqE3mYBdWy7ScPv",
+              "zkappCommand": {
+                "memo": "TWludCB0b2tlbnM=",
+                "feePayer": {
+                  "body": {
+                    "publicKey": "B62qoG5Yk4iVxpyczUrBNpwtx2xunPhxfG7yYA3xYBPJeRbABxvWC3K"
+                  }
+                },
+                "accountUpdates": [
+                  {
+                    "body": {
+                      "publicKey": "B62qnzkS7LNoSMY5fZ7zWTCDcKDqWvJU5MvLQrWV8VFCuRYEbGcR4P9"
+                    }
+                  }
+                ]
+              }
             }
           ]
         }

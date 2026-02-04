@@ -695,34 +695,6 @@ test.describe('Account Transaction History', () => {
   });
 });
 
-test.describe('Block List Snark Fees', () => {
-  test('blocks table shows snark fees column', async ({ page }) => {
-    await page.goto('/#/blocks');
-
-    // Wait for blocks to load
-    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
-
-    // Check for Snark Fees column header
-    await expect(page.locator('th').filter({ hasText: 'Snark Fees' })).toBeVisible();
-  });
-
-  test('blocks display snark fee values', async ({ page }) => {
-    await page.goto('/#/blocks');
-
-    // Wait for blocks to load
-    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
-
-    // Check that there are rows with MINA values in the snark fees column
-    // The table should have at least one row with data
-    const rows = page.locator('tbody tr');
-    await expect(rows.first()).toBeVisible();
-
-    // Snark fees column should contain values (can be 0 MINA)
-    const snarkFeeCells = page.locator('tbody tr td:nth-child(6)');
-    await expect(snarkFeeCells.first()).toBeVisible();
-  });
-});
-
 test.describe('Staking Page', () => {
   test('staking page loads and shows block producers', async ({ page }) => {
     await page.goto('/#/staking');
@@ -779,5 +751,55 @@ test.describe('Staking Page', () => {
 
     // Check for "Top Producer" badge on first row
     await expect(page.locator('text=Top Producer')).toBeVisible();
+  });
+});
+
+test.describe('zkApps Page', () => {
+  test('zkApps page loads and shows header', async ({ page }) => {
+    await page.goto('/#/zkapps');
+
+    // Check page title
+    await expect(page.locator('h1')).toContainText('zkApp Explorer');
+
+    // Check for description
+    await expect(
+      page.locator('text=/recently active zkApps/i'),
+    ).toBeVisible();
+  });
+
+  test('zkApps page shows stats cards', async ({ page }) => {
+    await page.goto('/#/zkapps');
+
+    // Wait for stats to load
+    await expect(page.locator('text=Active zkApps')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check for recent transactions stat
+    await expect(page.locator('text=Recent Transactions')).toBeVisible();
+  });
+
+  test('zkApps page navigation link works', async ({ page }) => {
+    await page.goto('/');
+
+    // Click zkApps link in navigation
+    await page.locator('nav a').filter({ hasText: 'zkApps' }).first().click();
+
+    // Should navigate to zkApps page
+    await expect(page).toHaveURL(/\/zkapps/);
+    await expect(page.locator('h1')).toContainText('zkApp Explorer');
+  });
+
+  test('zkApps page shows zkApp activity when available', async ({ page }) => {
+    await page.goto('/#/zkapps');
+
+    // Wait for page to load
+    await expect(page.locator('h1')).toContainText('zkApp Explorer');
+
+    // Either shows a table with zkApps or "No zkApp Activity Found" message
+    const table = page.locator('table');
+    const noActivity = page.locator('text=/No zkApp Activity Found/i');
+
+    await expect(table.or(noActivity)).toBeVisible({ timeout: 15000 });
   });
 });

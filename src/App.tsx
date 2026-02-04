@@ -12,6 +12,7 @@ import {
   AccountsPage,
   AccountPage,
   StakingPage,
+  ZkAppsPage,
   NotFoundPage,
 } from '@/pages';
 
@@ -33,6 +34,7 @@ export function App(): ReactNode {
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="account/:publicKey" element={<AccountPage />} />
               <Route path="staking" element={<StakingPage />} />
+              <Route path="zkapps" element={<ZkAppsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
