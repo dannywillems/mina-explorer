@@ -56,7 +56,10 @@ test.describe('Mina Explorer', () => {
 
     // Wait for epoch data to load (should show a number, not '-')
     // The epoch number should be visible
-    const epochCard = page.locator('div').filter({ hasText: /^Epoch/ }).first();
+    const epochCard = page
+      .locator('div')
+      .filter({ hasText: /^Epoch/ })
+      .first();
     await expect(epochCard).toBeVisible();
 
     // Check for slot progress text (shows "X / 7,140 slots")
@@ -521,7 +524,10 @@ test.describe('Account Page', () => {
     await expect(page.locator('h1')).toContainText('Account Details');
 
     // Wait for account card to appear (use specific heading)
-    const accountCard = page.getByRole('heading', { name: 'Account', exact: true });
+    const accountCard = page.getByRole('heading', {
+      name: 'Account',
+      exact: true,
+    });
 
     await expect(accountCard).toBeVisible({ timeout: 25000 });
 
@@ -683,7 +689,9 @@ test.describe('Account Transaction History', () => {
     ).toBeVisible({ timeout: 20000 });
 
     // Check for MinaScan link
-    const minascanLink = page.locator('a').filter({ hasText: 'See on MinaScan' });
+    const minascanLink = page
+      .locator('a')
+      .filter({ hasText: 'See on MinaScan' });
     await expect(minascanLink).toBeVisible();
 
     // Verify it's an external link with correct href pattern
@@ -762,10 +770,18 @@ test.describe('Staking Page', () => {
     });
 
     // Check for time period buttons
-    await expect(page.locator('button').filter({ hasText: 'Last 24 hours' })).toBeVisible();
-    await expect(page.locator('button').filter({ hasText: 'Last 7 days' })).toBeVisible();
-    await expect(page.locator('button').filter({ hasText: 'Last 30 days' })).toBeVisible();
-    await expect(page.locator('button').filter({ hasText: /Last epoch/i })).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 24 hours' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 7 days' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 30 days' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: /Last epoch/i }),
+    ).toBeVisible();
   });
 
   test('staking page time period selector changes data', async ({ page }) => {
@@ -802,9 +818,7 @@ test.describe('zkApps Page', () => {
     await expect(page.locator('h1')).toContainText('zkApp Explorer');
 
     // Check for description
-    await expect(
-      page.locator('text=/recently active zkApps/i'),
-    ).toBeVisible();
+    await expect(page.locator('text=/recently active zkApps/i')).toBeVisible();
   });
 
   test('zkApps page shows stats cards', async ({ page }) => {
@@ -900,5 +914,54 @@ test.describe('Transaction Not Found', () => {
     await expect(notFound.or(error)).toBeVisible({
       timeout: 20000,
     });
+  });
+});
+
+test.describe('Copy to Clipboard', () => {
+  test('block detail shows copy button for state hash', async ({ page }) => {
+    await page.goto('/#/block/432150');
+
+    // Wait for block details to load
+    await expect(page.locator('text=State Hash')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check that copy button is present (lucide Copy icon button)
+    const stateHashRow = page
+      .locator('div')
+      .filter({ hasText: 'State Hash' })
+      .first();
+    await expect(stateHashRow.locator('button').first()).toBeVisible();
+  });
+
+  test('account detail shows copy button for public key', async ({ page }) => {
+    // Go to a known account (from fixtures)
+    await page.goto(
+      '/#/account/B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg',
+    );
+
+    // Wait for account details to load
+    await expect(page.locator('text=Public Key')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check that copy button is present
+    const publicKeyRow = page
+      .locator('div')
+      .filter({ hasText: 'Public Key' })
+      .first();
+    await expect(publicKeyRow.locator('button').first()).toBeVisible();
+  });
+
+  test('hash links show copy button', async ({ page }) => {
+    await page.goto('/#/blocks');
+
+    // Wait for blocks table to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Hash links should have copy buttons (the small button next to the hash)
+    // Look for the first hash link row and check for a button
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow.locator('button').first()).toBeVisible();
   });
 });

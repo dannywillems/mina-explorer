@@ -1,12 +1,15 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { Copy, Check } from 'lucide-react';
 import { formatHash, formatAddress } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 
 interface HashLinkProps {
   hash: string;
   type: 'block' | 'transaction' | 'account';
   truncate?: boolean;
   prefixLength?: number;
+  showCopy?: boolean;
 }
 
 export function HashLink({
@@ -14,7 +17,10 @@ export function HashLink({
   type,
   truncate = true,
   prefixLength = 8,
+  showCopy = true,
 }: HashLinkProps): ReactNode {
+  const [copied, setCopied] = useState(false);
+
   const pathMap = {
     block: `/block/${hash}`,
     transaction: `/tx/${hash}`,
@@ -28,9 +34,38 @@ export function HashLink({
         ? formatHash(hash, prefixLength)
         : hash;
 
+  const handleCopy = async (e: React.MouseEvent): Promise<void> => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(hash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API not available
+    }
+  };
+
   return (
-    <Link to={pathMap[type]} className="font-mono text-primary hover:underline">
-      {displayText}
-    </Link>
+    <span className="inline-flex items-center gap-1">
+      <Link
+        to={pathMap[type]}
+        className="font-mono text-primary hover:underline"
+      >
+        {displayText}
+      </Link>
+      {showCopy && (
+        <button
+          onClick={handleCopy}
+          className={cn(
+            'inline-flex items-center justify-center rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+            copied && 'text-green-600 dark:text-green-400',
+          )}
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+        </button>
+      )}
+    </span>
   );
 }

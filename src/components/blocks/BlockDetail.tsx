@@ -1,5 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { HashLink, Amount, LoadingSpinner } from '@/components/common';
+import {
+  HashLink,
+  Amount,
+  LoadingSpinner,
+  CopyButton,
+} from '@/components/common';
 import {
   formatDateTime,
   formatNumber,
@@ -96,9 +101,12 @@ export function BlockDetail({
                 </div>
                 <div className="flex flex-col gap-1 border-b border-border pb-2">
                   <span className="text-muted-foreground">State Hash</span>
-                  <span className="break-all font-mono text-sm">
-                    {block.stateHash}
-                  </span>
+                  <div className="flex items-start gap-2">
+                    <span className="break-all font-mono text-sm">
+                      {block.stateHash}
+                    </span>
+                    <CopyButton text={block.stateHash} />
+                  </div>
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-muted-foreground">Timestamp</span>

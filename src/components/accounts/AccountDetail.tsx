@@ -1,6 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
-import { HashLink, Amount, LoadingSpinner } from '@/components/common';
+import {
+  HashLink,
+  Amount,
+  LoadingSpinner,
+  CopyButton,
+} from '@/components/common';
 import { cn } from '@/lib/utils';
 import type { Account } from '@/types';
 
@@ -110,9 +115,12 @@ export function AccountDetail({
                 <span className="text-sm text-muted-foreground">
                   Public Key
                 </span>
-                <span className="break-all font-mono text-sm">
-                  {account.publicKey}
-                </span>
+                <div className="flex items-start gap-2">
+                  <span className="break-all font-mono text-sm">
+                    {account.publicKey}
+                  </span>
+                  <CopyButton text={account.publicKey} />
+                </div>
               </div>
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <span className="text-muted-foreground">Balance</span>

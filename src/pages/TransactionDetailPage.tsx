@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useTransaction } from '@/hooks';
-import { HashLink, Amount, LoadingSpinner } from '@/components/common';
+import {
+  HashLink,
+  Amount,
+  LoadingSpinner,
+  CopyButton,
+} from '@/components/common';
 import { formatDateTime, formatNumber, decodeMemo } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
@@ -153,9 +158,12 @@ function TransactionDetail({
           <div className="space-y-4">
             <div className="flex flex-col gap-1 border-b border-border pb-2">
               <span className="text-muted-foreground">Transaction Hash</span>
-              <span className="break-all font-mono text-sm">
-                {transaction.hash}
-              </span>
+              <div className="flex items-start gap-2">
+                <span className="break-all font-mono text-sm">
+                  {transaction.hash}
+                </span>
+                <CopyButton text={transaction.hash} />
+              </div>
             </div>
 
             {transaction.blockHeight && (
