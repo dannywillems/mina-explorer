@@ -126,3 +126,70 @@ footer .link-hover:hover {
     color: #fff;
   }
 }
+
+// Dark mode adjustments
+[data-bs-theme='dark'] {
+  // Card styling for dark mode
+  .card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    .card-header {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+      h5,
+      h6 {
+        color: #fff;
+      }
+    }
+  }
+
+  // Table header text more visible in dark mode
+  .table {
+    th {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  // Text muted should be more visible
+  .text-muted {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  // Links in dark mode
+  a:not(.btn):not(.nav-link):not(.navbar-brand) {
+    color: #6ea8fe;
+
+    &:hover {
+      color: #9ec5fe;
+    }
+  }
+
+  // Breadcrumb styling
+  .breadcrumb-item {
+    a {
+      color: #6ea8fe;
+    }
+
+    &.active {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    + .breadcrumb-item::before {
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  // Alert adjustments
+  .alert-warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.3);
+    color: #ffda6a;
+  }
+
+  .alert-danger {
+    background-color: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: #ea868f;
+  }
+}
