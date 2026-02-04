@@ -508,14 +508,10 @@ test.describe('Account Page', () => {
     // Wait for account page to load
     await expect(page.locator('h1')).toContainText('Account Details');
 
-    // Wait for either account data, loading, or error state
-    const accountCard = page.locator('h2').filter({ hasText: /Account/ });
-    const loadingText = page.locator('text=/Loading/i');
-    const errorText = page.locator('text=/error|failed/i');
-
-    await expect(accountCard.or(loadingText).or(errorText)).toBeVisible({
-      timeout: 20000,
-    });
+    // Wait for account card to appear (use specific heading)
+    await expect(
+      page.getByRole('heading', { name: 'Account', exact: true }),
+    ).toBeVisible({ timeout: 20000 });
   });
 
   test('account page handles API response', async ({ page }) => {
@@ -524,20 +520,14 @@ test.describe('Account Page', () => {
     // Wait for page to load
     await expect(page.locator('h1')).toContainText('Account Details');
 
-    // Wait for either account card, loading, or error state
-    const accountCard = page.locator('h2').filter({ hasText: /Account/ });
-    const loadingText = page.locator('text=/Loading/i');
-    const errorText = page.locator('text=/error|failed/i');
+    // Wait for account card to appear (use specific heading)
+    const accountCard = page.getByRole('heading', { name: 'Account', exact: true });
 
-    await expect(accountCard.or(loadingText).or(errorText)).toBeVisible({
-      timeout: 25000,
-    });
+    await expect(accountCard).toBeVisible({ timeout: 25000 });
 
-    // If account loaded successfully, check for basic info
-    if (await accountCard.isVisible()) {
-      await expect(page.locator('text=Public Key').first()).toBeVisible();
-      await expect(page.locator('text=Balance').first()).toBeVisible();
-    }
+    // Check for basic info
+    await expect(page.locator('text=Public Key').first()).toBeVisible();
+    await expect(page.locator('text=Balance').first()).toBeVisible();
   });
 
   test('account page shows error for invalid account', async ({ page }) => {

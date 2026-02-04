@@ -12,4 +12,5 @@ export {
   usePendingTransactions,
   usePendingZkAppCommands,
   useTransaction,
+  useAccountTransactions,
 } from './useTransactions';

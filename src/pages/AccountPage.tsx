@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
-import { AccountDetail } from '@/components/accounts';
+import { AccountDetail, AccountTransactions } from '@/components/accounts';
 import { useAccount, useNetwork } from '@/hooks';
 
 export function AccountPage(): ReactNode {
@@ -17,6 +17,10 @@ export function AccountPage(): ReactNode {
         error={error}
         networkName={network.displayName}
       />
+
+      {publicKey && !loading && !error && account && (
+        <AccountTransactions publicKey={publicKey} />
+      )}
     </div>
   );
 }

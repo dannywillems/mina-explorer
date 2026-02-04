@@ -3,9 +3,11 @@ import {
   fetchPendingTransactions,
   fetchPendingZkAppCommands,
   fetchTransactionByHash,
+  fetchAccountTransactions,
   type PendingTransaction,
   type PendingZkAppCommand,
   type TransactionDetail,
+  type AccountTransaction,
 } from '@/services/api/transactions';
 import { useNetwork } from './useNetwork';
 
@@ -125,4 +127,49 @@ export function useTransaction(hash: string): UseTransactionResult {
   }, [hash, network.id]);
 
   return { transaction, loading, error };
+}
+
+interface UseAccountTransactionsResult {
+  transactions: AccountTransaction[];
+  loading: boolean;
+  error: string | null;
+}
+
+export function useAccountTransactions(
+  publicKey: string,
+): UseAccountTransactionsResult {
+  const [transactions, setTransactions] = useState<AccountTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { network } = useNetwork();
+
+  useEffect(() => {
+    if (!publicKey) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async (): Promise<void> => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchAccountTransactions(publicKey);
+        setTransactions(data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to fetch account transactions',
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [publicKey, network.id]);
+
+  return { transactions, loading, error };
 }

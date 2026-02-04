@@ -388,3 +388,91 @@ export async function fetchTransactionByHash(
 
   return null;
 }
+
+// Account transaction type for history
+export interface AccountTransaction {
+  hash: string;
+  type: 'sent' | 'received' | 'zkapp';
+  kind?: string | undefined;
+  counterparty?: string | undefined;
+  amount?: string | undefined;
+  fee: string;
+  blockHeight: number;
+  dateTime: string;
+  memo?: string | undefined;
+}
+
+/**
+ * Fetch transaction history for an account
+ * Returns sent and received transactions
+ */
+export async function fetchAccountTransactions(
+  publicKey: string,
+  limit: number = 500,
+): Promise<AccountTransaction[]> {
+  const client = getClient();
+  const transactions: AccountTransaction[] = [];
+
+  try {
+    const data = await client.query<SearchTransactionResponse>(
+      SEARCH_TRANSACTION_QUERY,
+      { limit },
+    );
+
+    for (const block of data.blocks) {
+      // Check user commands
+      for (const cmd of block.transactions.userCommands || []) {
+        if (cmd.from === publicKey) {
+          transactions.push({
+            hash: cmd.hash,
+            type: 'sent',
+            kind: cmd.kind,
+            counterparty: cmd.to,
+            amount: cmd.amount,
+            fee: cmd.fee,
+            blockHeight: block.blockHeight,
+            dateTime: block.dateTime,
+            memo: cmd.memo,
+          });
+        } else if (cmd.to === publicKey) {
+          transactions.push({
+            hash: cmd.hash,
+            type: 'received',
+            kind: cmd.kind,
+            counterparty: cmd.from,
+            amount: cmd.amount,
+            fee: cmd.fee,
+            blockHeight: block.blockHeight,
+            dateTime: block.dateTime,
+            memo: cmd.memo,
+          });
+        }
+      }
+
+      // Check zkApp commands
+      for (const cmd of block.transactions.zkappCommands || []) {
+        const feePayer = cmd.zkappCommand.feePayer.body.publicKey;
+        const affectedAccounts = cmd.zkappCommand.accountUpdates?.map(
+          u => u.body.publicKey,
+        );
+
+        if (feePayer === publicKey || affectedAccounts?.includes(publicKey)) {
+          transactions.push({
+            hash: cmd.hash,
+            type: 'zkapp',
+            counterparty: feePayer === publicKey ? undefined : feePayer,
+            fee: cmd.zkappCommand.feePayer.body.fee,
+            blockHeight: block.blockHeight,
+            dateTime: block.dateTime,
+            memo: cmd.zkappCommand.memo,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[API] Error fetching account transactions:', error);
+  }
+
+  // Sort by block height descending (newest first)
+  return transactions.sort((a, b) => b.blockHeight - a.blockHeight);
+}
