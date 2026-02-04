@@ -99,7 +99,7 @@ export function Footer(): ReactNode {
         <div className="row">
           <div className="col-12 text-center">
             <p className="text-muted small mb-0">
-              {currentYear} Mina Explorer. Open source under MIT License.
+              &copy; {currentYear} Mina Explorer. Open source under MIT License.
             </p>
           </div>
         </div>

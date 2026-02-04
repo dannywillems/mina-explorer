@@ -41,6 +41,11 @@ export function Header(): ReactNode {
                 Transactions
               </Link>
             </li>
+            <li className="nav-item">
+              <Link to="/accounts" className="nav-link">
+                Accounts
+              </Link>
+            </li>
           </ul>
 
           <div className="d-flex align-items-center gap-3">

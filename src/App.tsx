@@ -7,6 +7,7 @@ import {
   BlocksPage,
   BlockDetailPage,
   TransactionsPage,
+  AccountsPage,
   AccountPage,
   NotFoundPage,
 } from '@/pages';
@@ -21,6 +22,7 @@ export function App(): ReactNode {
             <Route path="blocks" element={<BlocksPage />} />
             <Route path="block/:identifier" element={<BlockDetailPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="accounts" element={<AccountsPage />} />
             <Route path="account/:publicKey" element={<AccountPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
