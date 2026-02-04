@@ -8,12 +8,14 @@ interface AccountDetailProps {
   account: Account | null;
   loading: boolean;
   error: string | null;
+  networkName?: string;
 }
 
 export function AccountDetail({
   account,
   loading,
   error,
+  networkName,
 }: AccountDetailProps): ReactNode {
   const [showJson, setShowJson] = useState(false);
 
@@ -32,7 +34,13 @@ export function AccountDetail({
   if (!account) {
     return (
       <div className="rounded-md bg-warning/10 p-4 text-sm text-warning">
-        Account not found.
+        <p className="font-medium">
+          Account not found on {networkName || 'this network'}.
+        </p>
+        <p className="mt-1 text-warning/80">
+          This account may exist on a different network. Try switching networks
+          using the selector in the header.
+        </p>
       </div>
     );
   }
@@ -163,16 +171,23 @@ export function AccountDetail({
               <div>
                 <h3 className="mb-3 font-semibold">Permissions</h3>
                 <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                  {Object.entries(account.permissions).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {key}:
-                      </span>
-                      <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium">
-                        {value}
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(account.permissions).map(([key, value]) => {
+                    // Handle object values (e.g., setVerificationKey can be an object)
+                    const displayValue =
+                      typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : String(value);
+                    return (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {key}:
+                        </span>
+                        <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium">
+                          {displayValue}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
