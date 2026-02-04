@@ -12,6 +12,7 @@ const BLOCKS_QUERY_FULL = `
       stateHash
       creator
       dateTime
+      canonical
       protocolState {
         consensusState {
           epoch
@@ -37,6 +38,7 @@ const BLOCKS_QUERY_BASIC = `
       stateHash
       creator
       dateTime
+      canonical
       transactions {
         coinbase
       }
@@ -54,6 +56,7 @@ const BLOCK_BY_HEIGHT_QUERY = `
       stateHash
       creator
       dateTime
+      canonical
       transactions {
         coinbase
       }
@@ -77,6 +80,7 @@ interface ApiBlock {
   stateHash: string;
   creator: string;
   dateTime: string;
+  canonical: boolean;
   protocolState?: {
     consensusState: {
       epoch: number;
@@ -105,7 +109,7 @@ function mapApiBlockToSummary(block: ApiBlock): BlockSummary {
     dateTime: block.dateTime,
     txFees: '0',
     snarkFees: '0',
-    canonical: true,
+    canonical: block.canonical,
     coinbase: block.transactions.coinbase,
     epoch: block.protocolState?.consensusState.epoch,
     slot: block.protocolState?.consensusState.slot,
@@ -123,7 +127,7 @@ function mapApiBlockToDetail(block: ApiBlock): BlockDetail {
     dateTime: block.dateTime,
     txFees: '0',
     snarkFees: '0',
-    canonical: true,
+    canonical: block.canonical,
     receivedTime: block.dateTime,
     winnerAccount: { publicKey: block.creator },
     protocolState: {

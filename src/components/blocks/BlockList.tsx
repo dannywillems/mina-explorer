@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { HashLink, TimeAgo, Amount, LoadingSpinner } from '@/components/common';
 import { formatNumber } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 import type { BlockSummary } from '@/types';
 
 interface BlockListProps {
@@ -51,15 +53,29 @@ export function BlockList({
           {blocks.map(block => (
             <tr
               key={block.stateHash}
-              className="transition-colors hover:bg-accent/50"
+              className={cn(
+                'transition-colors hover:bg-accent/50',
+                !block.canonical && 'bg-yellow-500/5',
+              )}
             >
               <td className="px-4 py-3">
-                <Link
-                  to={`/block/${block.blockHeight}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {formatNumber(block.blockHeight)}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/block/${block.blockHeight}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {formatNumber(block.blockHeight)}
+                  </Link>
+                  {!block.canonical && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded bg-yellow-500/10 px-1.5 py-0.5 text-xs text-yellow-600 dark:text-yellow-400"
+                      title="This block is not on the canonical chain"
+                    >
+                      <AlertTriangle size={12} />
+                      Orphaned
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3">
                 <HashLink hash={block.stateHash} type="block" />

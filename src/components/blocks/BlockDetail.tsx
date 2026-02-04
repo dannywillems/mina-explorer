@@ -40,9 +40,21 @@ export function BlockDetail({
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h2 className="font-semibold">
-          Block #{formatNumber(block.blockHeight)}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-semibold">
+            Block #{formatNumber(block.blockHeight)}
+          </h2>
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-xs font-medium',
+              block.canonical
+                ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+            )}
+          >
+            {block.canonical ? 'Canonical' : 'Orphaned'}
+          </span>
+        </div>
         <button
           className={cn(
             'rounded-md border border-input px-3 py-1.5 text-sm',
