@@ -8,8 +8,10 @@ test.describe('Mina Explorer', () => {
     // Check page title
     await expect(page).toHaveTitle(/Mina Explorer/);
 
-    // Check main heading (Mina is now an image, so just check for Explorer)
-    await expect(page.locator('h1')).toContainText('Explorer');
+    // Check header logo link (Mina is an image + "Explorer" text)
+    await expect(
+      page.locator('header a').filter({ hasText: 'Explorer' }).first(),
+    ).toBeVisible();
 
     // Check search bar is present (use first() to handle multiple)
     await expect(
@@ -379,8 +381,10 @@ test.describe('Network Picker', () => {
     // Refresh the page
     await page.reload();
 
-    // Wait for page to load
-    await expect(page.locator('h1')).toContainText('Explorer');
+    // Wait for page to load (check header logo link)
+    await expect(
+      page.locator('header a').filter({ hasText: 'Explorer' }).first(),
+    ).toBeVisible();
 
     // Verify Mainnet is still selected after refresh
     await expect(
