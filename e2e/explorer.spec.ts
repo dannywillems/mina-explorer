@@ -673,6 +673,26 @@ test.describe('Account Transaction History', () => {
       timeout: 10000,
     });
   });
+
+  test('account page shows MinaScan link', async ({ page }) => {
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for account to load
+    await expect(
+      page.getByRole('heading', { name: 'Account', exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+
+    // Check for MinaScan link
+    const minascanLink = page.locator('a').filter({ hasText: 'See on MinaScan' });
+    await expect(minascanLink).toBeVisible();
+
+    // Verify it's an external link with correct href pattern
+    await expect(minascanLink).toHaveAttribute('target', '_blank');
+    await expect(minascanLink).toHaveAttribute(
+      'href',
+      new RegExp(`minascan.io/.*/account/${FIXTURES.accounts.blockProducer}`),
+    );
+  });
 });
 
 test.describe('Block List Snark Fees', () => {

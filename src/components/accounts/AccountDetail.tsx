@@ -9,6 +9,20 @@ interface AccountDetailProps {
   loading: boolean;
   error: string | null;
   networkName?: string;
+  networkId?: string;
+}
+
+// Map network IDs to MinaScan network slugs
+function getMinaScanNetwork(networkId?: string): string {
+  switch (networkId) {
+    case 'mainnet':
+      return 'mainnet';
+    case 'devnet':
+    case 'mesa':
+      return 'devnet';
+    default:
+      return 'mainnet';
+  }
 }
 
 export function AccountDetail({
@@ -16,6 +30,7 @@ export function AccountDetail({
   loading,
   error,
   networkName,
+  networkId,
 }: AccountDetailProps): ReactNode {
   const [showJson, setShowJson] = useState(false);
 
@@ -58,15 +73,29 @@ export function AccountDetail({
             </span>
           )}
         </div>
-        <button
-          className={cn(
-            'rounded-md border border-input px-3 py-1.5 text-sm',
-            'transition-colors hover:bg-accent',
-          )}
-          onClick={() => setShowJson(!showJson)}
-        >
-          {showJson ? 'Hide JSON' : 'View JSON'}
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://minascan.io/${getMinaScanNetwork(networkId)}/account/${account.publicKey}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm',
+              'transition-colors hover:bg-accent',
+            )}
+          >
+            See on MinaScan
+            <ExternalLink size={14} />
+          </a>
+          <button
+            className={cn(
+              'rounded-md border border-input px-3 py-1.5 text-sm',
+              'transition-colors hover:bg-accent',
+            )}
+            onClick={() => setShowJson(!showJson)}
+          >
+            {showJson ? 'Hide JSON' : 'View JSON'}
+          </button>
+        </div>
       </div>
       <div className="p-6">
         {showJson ? (

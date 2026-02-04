@@ -16,6 +16,7 @@ export function AccountPage(): ReactNode {
         loading={loading}
         error={error}
         networkName={network.displayName}
+        networkId={network.id}
       />
 
       {publicKey && !loading && !error && account && (
