@@ -995,3 +995,97 @@ test.describe('Copy to Clipboard', () => {
     await expect(firstRow.locator('button').first()).toBeVisible();
   });
 });
+
+test.describe('Analytics Page', () => {
+  test('analytics page loads and shows header', async ({ page }) => {
+    await page.goto('/#/analytics');
+
+    // Check page title
+    await expect(page.locator('h1')).toContainText('Network Analytics');
+
+    // Check for description
+    await expect(
+      page.locator('text=/network activity and performance/i'),
+    ).toBeVisible();
+  });
+
+  test('analytics page shows stats cards', async ({ page }) => {
+    await page.goto('/#/analytics');
+
+    // Wait for stats to load
+    await expect(page.locator('text=Total Blocks')).toBeVisible({
+      timeout: 30000,
+    });
+
+    // Check for other stats
+    await expect(page.locator('text=Total Transactions')).toBeVisible();
+    await expect(page.locator('text=zkApp Commands').first()).toBeVisible();
+    await expect(page.locator('text=Avg Block Time')).toBeVisible();
+    await expect(page.locator('text=TPS')).toBeVisible();
+    await expect(page.locator('text=Avg Fee')).toBeVisible();
+  });
+
+  test('analytics page shows period selector', async ({ page }) => {
+    await page.goto('/#/analytics');
+
+    // Wait for page to load
+    await expect(page.locator('text=Period:')).toBeVisible({ timeout: 15000 });
+
+    // Check for period buttons
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 24 hours' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 7 days' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: 'Last 30 days' }),
+    ).toBeVisible();
+  });
+
+  test('analytics page shows charts', async ({ page }) => {
+    await page.goto('/#/analytics');
+
+    // Wait for charts to load
+    await expect(page.locator('text=Block Production')).toBeVisible({
+      timeout: 30000,
+    });
+
+    // Check for chart sections
+    await expect(page.locator('text=Transaction Volume')).toBeVisible();
+    await expect(page.locator('text=Average Block Time')).toBeVisible();
+    await expect(page.locator('text=Daily Summary')).toBeVisible();
+  });
+
+  test('analytics page navigation link works', async ({ page }) => {
+    await page.goto('/');
+
+    // Click analytics link in navigation
+    await page
+      .locator('nav a')
+      .filter({ hasText: 'Analytics' })
+      .first()
+      .click();
+
+    // Should navigate to analytics page
+    await expect(page).toHaveURL(/\/analytics/);
+    await expect(page.locator('h1')).toContainText('Network Analytics');
+  });
+
+  test('analytics period selector changes data', async ({ page }) => {
+    await page.goto('/#/analytics');
+
+    // Wait for initial load
+    await expect(page.locator('text=Total Blocks')).toBeVisible({
+      timeout: 30000,
+    });
+
+    // Click on "Last 24 hours"
+    await page.locator('button').filter({ hasText: 'Last 24 hours' }).click();
+
+    // Wait for data to reload - stats should still be visible
+    await expect(page.locator('text=Total Blocks')).toBeVisible({
+      timeout: 30000,
+    });
+  });
+});

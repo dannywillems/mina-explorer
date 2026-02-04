@@ -38,6 +38,75 @@ export async function setupApiMocks(page: Page): Promise<void> {
 }
 
 /**
+ * Generate mock analytics data for testing
+ */
+function generateAnalyticsData(): { data: { blocks: unknown[] } } {
+  const blocks = [];
+  const now = new Date();
+
+  // Generate 7 days of block data
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - d);
+
+    // Generate ~20 blocks per day
+    for (let b = 0; b < 20; b++) {
+      const blockDate = new Date(date);
+      blockDate.setHours(Math.floor((b / 20) * 24));
+
+      blocks.push({
+        blockHeight: 432150 - d * 20 - b,
+        dateTime: blockDate.toISOString(),
+        txFees: '100000000', // 0.1 MINA
+        transactions: {
+          userCommands: [{ hash: 'CkpMock...' }],
+          zkappCommands: d % 2 === 0 ? [{ hash: 'CkpZk...' }] : [],
+        },
+      });
+    }
+  }
+
+  return { data: { blocks } };
+}
+
+/**
+ * Generate mock staking/block producer data for testing
+ */
+function generateStakingData(): {
+  data: {
+    blocks: { creator: string; blockHeight: number; dateTime: string }[];
+  };
+} {
+  const blocks = [];
+  const now = new Date();
+  const producers = [
+    'B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg',
+    'B62qpge4uMq4Vv5Rvc8Gw9qSquUYd6xoW1pz7HQkMSHm6h1o7pvLPAN',
+    'B62qkRodi7nj6W1geB12UuW2XAx2yidWZCcDthJvkf9G4A6G5GFasVQ',
+  ];
+
+  // Generate 7 days of block data
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - d);
+
+    // Generate ~20 blocks per day, distributed among producers
+    for (let b = 0; b < 20; b++) {
+      const blockDate = new Date(date);
+      blockDate.setHours(Math.floor((b / 20) * 24));
+
+      blocks.push({
+        creator: producers[b % producers.length],
+        blockHeight: 432150 - d * 20 - b,
+        dateTime: blockDate.toISOString(),
+      });
+    }
+  }
+
+  return { data: { blocks } };
+}
+
+/**
  * Mock CoinGecko price data
  */
 const MOCK_PRICE_DATA = {
@@ -100,6 +169,32 @@ async function handleArchiveRequest(route: Route): Promise<void> {
   try {
     const body = JSON.parse(postData);
     const query = body.query || '';
+
+    // Handle analytics queries (includes txFees or BlocksAnalytics in query name)
+    if (query.includes('BlocksAnalytics') || query.includes('txFees')) {
+      // Generate mock analytics data
+      const analyticsData = generateAnalyticsData();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(analyticsData),
+      });
+      return;
+    }
+
+    // Handle staking/block producers queries (date range with creator field)
+    if (
+      query.includes('GetBlocksByDateRange') ||
+      (query.includes('dateTime_gte') && query.includes('creator'))
+    ) {
+      const stakingData = generateStakingData();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(stakingData),
+      });
+      return;
+    }
 
     // Handle block detail queries (with userCommands or zkappCommands)
     // Note: feeTransfer alone is not sufficient as block list queries also include it

@@ -21,3 +21,4 @@ export {
 } from './useTransactions';
 export { usePrice } from './usePrice';
 export { useHistoricalPrice } from './useHistoricalPrice';
+export { useAnalytics, type AnalyticsPeriod } from './useAnalytics';
