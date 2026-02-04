@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { FIXTURES } from './fixtures';
+import { test, expect, FIXTURES, isMocked } from './fixtures';
 
 /**
  * Tests to verify that both archive and daemon endpoints work together
@@ -183,6 +182,9 @@ test.describe('Network Endpoints Integration', () => {
     });
 
     test('network switch updates both endpoint contexts', async ({ page }) => {
+      // Skip in mocked mode - same fixture data for all networks
+      test.skip(isMocked, 'Uses same fixture for all networks');
+
       await page.goto('/');
 
       // Start with Mesa - load blocks

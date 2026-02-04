@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { FIXTURES } from './fixtures';
+import { test, expect, FIXTURES, isMocked } from './fixtures';
 
 test.describe('Mina Explorer', () => {
   test('homepage loads correctly', async ({ page }) => {
@@ -127,6 +126,37 @@ test.describe('Mina Explorer', () => {
     // Check that block details are displayed
     await expect(page.locator('text=State Hash').first()).toBeVisible();
     await expect(page.locator('text=Block Producer').first()).toBeVisible();
+  });
+
+  test('block detail page shows transactions', async ({ page }) => {
+    // Go to a specific block with transactions
+    await page.goto(`/#/block/${FIXTURES.blocks.knownHeight}`);
+
+    // Wait for block detail page to load
+    await expect(page.locator('h2').filter({ hasText: /Block #/ })).toBeVisible(
+      { timeout: 15000 },
+    );
+
+    // Check that transactions section exists
+    await expect(page.locator('h3:has-text("Transactions")')).toBeVisible();
+
+    // Check that transaction tabs are present
+    await expect(
+      page.locator('button:has-text("User Commands")'),
+    ).toBeVisible();
+    await expect(
+      page.locator('button:has-text("zkApp Commands")'),
+    ).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Fee Transfers")'),
+    ).toBeVisible();
+
+    // Check transaction count is displayed in tabs
+    await expect(page.locator('text=/User Commands \\(\\d+\\)/')).toBeVisible();
+
+    // Check that fee and snark fields are shown
+    await expect(page.locator('text=Transaction Fees').first()).toBeVisible();
+    await expect(page.locator('text=Snark Fees').first()).toBeVisible();
   });
 
   test('search by block height works', async ({ page }) => {
@@ -393,6 +423,9 @@ test.describe('Network Picker', () => {
   });
 
   test('block height updates when switching networks', async ({ page }) => {
+    // Skip in mocked mode - same fixture data for all networks
+    test.skip(isMocked, 'Uses same fixture for all networks');
+
     await page.goto('/');
 
     // Wait for network stats to load

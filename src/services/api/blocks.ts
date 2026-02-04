@@ -79,6 +79,71 @@ const BLOCKS_QUERY_PAGINATED = `
   }
 `;
 
+// Full block detail query with transactions
+const BLOCK_DETAIL_QUERY = `
+  query GetBlockByHeight($blockHeightGte: Int!, $blockHeightLt: Int!) {
+    blocks(
+      query: { blockHeight_gte: $blockHeightGte, blockHeight_lt: $blockHeightLt }
+      limit: 1
+    ) {
+      blockHeight
+      stateHash
+      creator
+      dateTime
+      transactions {
+        coinbase
+        userCommands {
+          hash
+          kind
+          from
+          to
+          amount
+          fee
+          memo
+          nonce
+          failureReason
+        }
+        zkappCommands {
+          hash
+          failureReasons {
+            failures
+          }
+          zkappCommand {
+            memo
+            feePayer {
+              body {
+                publicKey
+                fee
+              }
+            }
+            accountUpdates {
+              body {
+                publicKey
+                tokenId
+                balanceChange {
+                  magnitude
+                  sgn
+                }
+              }
+            }
+          }
+        }
+        feeTransfer {
+          recipient
+          fee
+          type
+        }
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
+      }
+    }
+  }
+`;
+
+// Fallback query without full transaction details
 const BLOCK_BY_HEIGHT_QUERY = `
   query GetBlockByHeight($blockHeightGte: Int!, $blockHeightLt: Int!) {
     blocks(
@@ -129,6 +194,64 @@ interface ApiBlock {
   };
 }
 
+interface ApiBlockDetail {
+  blockHeight: number;
+  stateHash: string;
+  creator: string;
+  dateTime: string;
+  transactions: {
+    coinbase: string;
+    userCommands?: Array<{
+      hash: string;
+      kind: string;
+      from: string;
+      to: string;
+      amount: string;
+      fee: string;
+      memo: string;
+      nonce: number;
+      failureReason: string | null;
+    }>;
+    zkappCommands?: Array<{
+      hash: string;
+      failureReasons: Array<{ failures: string[] }> | null;
+      zkappCommand: {
+        memo: string;
+        feePayer: {
+          body: {
+            publicKey: string;
+            fee: string;
+          };
+        };
+        accountUpdates: Array<{
+          body: {
+            publicKey: string;
+            tokenId: string;
+            balanceChange: {
+              magnitude: string;
+              sgn: string;
+            };
+          };
+        }>;
+      };
+    }>;
+    feeTransfer?: Array<{
+      recipient: string;
+      fee: string;
+      type: string;
+    }>;
+  };
+}
+
+interface BlockDetailResponse {
+  blocks: ApiBlockDetail[];
+  networkState: {
+    maxBlockHeight: {
+      canonicalMaxBlockHeight: number;
+    };
+  };
+}
+
 interface BlocksResponse {
   blocks: ApiBlock[];
   networkState: {
@@ -162,6 +285,81 @@ function mapApiBlockToSummary(
 }
 
 function mapApiBlockToDetail(
+  block: ApiBlockDetail,
+  canonicalMaxBlockHeight: number,
+): BlockDetail {
+  // Calculate total tx fees from user commands
+  const txFees = (block.transactions.userCommands || []).reduce(
+    (sum, cmd) => sum + BigInt(cmd.fee || '0'),
+    BigInt(0),
+  );
+
+  // Calculate snark fees from fee transfers
+  const snarkFees = (block.transactions.feeTransfer || [])
+    .filter(ft => ft.type === 'Fee_transfer')
+    .reduce((sum, ft) => sum + BigInt(ft.fee || '0'), BigInt(0));
+
+  return {
+    blockHeight: block.blockHeight,
+    stateHash: block.stateHash,
+    parentHash: '',
+    creator: block.creator,
+    creatorAccount: { publicKey: block.creator },
+    dateTime: block.dateTime,
+    txFees: txFees.toString(),
+    snarkFees: snarkFees.toString(),
+    canonical: block.blockHeight <= canonicalMaxBlockHeight,
+    receivedTime: block.dateTime,
+    winnerAccount: { publicKey: block.creator },
+    protocolState: {
+      consensusState: {
+        epoch: 0,
+        slot: 0,
+        blockHeight: block.blockHeight,
+      },
+      previousStateHash: '',
+    },
+    transactions: {
+      userCommands: (block.transactions.userCommands || []).map(cmd => ({
+        hash: cmd.hash,
+        kind: cmd.kind,
+        from: cmd.from,
+        to: cmd.to,
+        amount: cmd.amount,
+        fee: cmd.fee,
+        memo: cmd.memo,
+        nonce: cmd.nonce,
+        failureReason: cmd.failureReason,
+        dateTime: block.dateTime,
+      })),
+      zkappCommands: (block.transactions.zkappCommands || []).map(cmd => ({
+        hash: cmd.hash,
+        zkappCommand: {
+          memo: cmd.zkappCommand.memo,
+          feePayer: cmd.zkappCommand.feePayer,
+          accountUpdates: cmd.zkappCommand.accountUpdates.map(update => ({
+            body: {
+              publicKey: update.body.publicKey,
+              tokenId: update.body.tokenId,
+              balanceChange: update.body.balanceChange,
+              callDepth: 0,
+            },
+          })),
+        },
+        failureReason: cmd.failureReasons?.flatMap(fr => fr.failures) || null,
+        dateTime: block.dateTime,
+      })),
+      feeTransfer: (block.transactions.feeTransfer || []).map(ft => ({
+        recipient: ft.recipient,
+        fee: ft.fee,
+        type: ft.type,
+      })),
+      coinbase: block.transactions.coinbase,
+    },
+  };
+}
+
+function mapBasicBlockToDetail(
   block: ApiBlock,
   canonicalMaxBlockHeight: number,
 ): BlockDetail {
@@ -287,22 +485,43 @@ export async function fetchBlockByHeight(
   blockHeight: number,
 ): Promise<BlockDetail | null> {
   const client = getClient();
-  const data = await client.query<BlocksResponse>(BLOCK_BY_HEIGHT_QUERY, {
-    blockHeightGte: blockHeight,
-    blockHeightLt: blockHeight + 1,
-  });
-  if (data.blocks.length === 0) {
-    return null;
+
+  // Try detailed query first
+  try {
+    const data = await client.query<BlockDetailResponse>(BLOCK_DETAIL_QUERY, {
+      blockHeightGte: blockHeight,
+      blockHeightLt: blockHeight + 1,
+    });
+    if (data.blocks.length === 0) {
+      return null;
+    }
+    const canonicalMax =
+      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+    return mapApiBlockToDetail(data.blocks[0], canonicalMax);
+  } catch (error) {
+    // Fallback to basic query if detailed query fails
+    console.log(
+      '[API] Detailed block query failed, trying basic query...',
+      error,
+    );
+    const data = await client.query<BlocksResponse>(BLOCK_BY_HEIGHT_QUERY, {
+      blockHeightGte: blockHeight,
+      blockHeightLt: blockHeight + 1,
+    });
+    if (data.blocks.length === 0) {
+      return null;
+    }
+    const canonicalMax =
+      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+    return mapBasicBlockToDetail(data.blocks[0], canonicalMax);
   }
-  const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
-  return mapApiBlockToDetail(data.blocks[0], canonicalMax);
 }
 
 export async function fetchBlockByHash(
   stateHash: string,
 ): Promise<BlockDetail | null> {
   // The API doesn't support querying by stateHash directly
-  // We need to search through recent blocks
+  // We need to search through recent blocks to find the height, then fetch details
   const client = getClient();
 
   let data: BlocksResponse;
@@ -321,8 +540,9 @@ export async function fetchBlockByHash(
   if (!block) {
     return null;
   }
-  const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
-  return mapApiBlockToDetail(block, canonicalMax);
+
+  // Fetch full block details by height
+  return fetchBlockByHeight(block.blockHeight);
 }
 
 export async function fetchNetworkState(): Promise<NetworkState> {

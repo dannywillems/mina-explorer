@@ -1,0 +1,44 @@
+{
+  "data": {
+    "account": {
+      "publicKey": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+      "balance": {
+        "total": "150000000000000",
+        "liquid": "100000000000000",
+        "locked": "50000000000000"
+      },
+      "nonce": "42",
+      "delegate": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+      "votingFor": "3NK2tkzqqK5spR2sZ7tujjqPksL45M3UUrcA4WhCkeiPtnugyE2x",
+      "timing": {
+        "initialMinimumBalance": "50000000000000",
+        "cliffTime": "86400",
+        "cliffAmount": "10000000000000",
+        "vestingPeriod": "1",
+        "vestingIncrement": "1000000000"
+      },
+      "permissions": {
+        "editState": "Proof",
+        "access": "None",
+        "send": "Signature",
+        "receive": "None",
+        "setDelegate": "Signature",
+        "setPermissions": "Signature",
+        "setVerificationKey": {
+          "auth": "Signature",
+          "txnVersion": "1"
+        },
+        "setZkappUri": "Signature",
+        "editActionState": "Proof",
+        "setTokenSymbol": "Signature",
+        "incrementNonce": "Signature",
+        "setVotingFor": "Signature",
+        "setTiming": "Signature"
+      },
+      "zkappState": null,
+      "tokenSymbol": "",
+      "receiptChainHash": "2mzbV7WevxLuchs2dAMY4vQBS6XttnCUF8Hvks4XNBQ5qiSGGBQe",
+      "actionState": null
+    }
+  }
+}

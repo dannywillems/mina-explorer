@@ -1,0 +1,83 @@
+{
+  "data": {
+    "blocks": [
+      {
+        "blockHeight": 432150,
+        "stateHash": "3NKeMoncuHab5ScarV5ViyF16cJPT4taWNSaTLS64Dp67wuXigPZ",
+        "creator": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+        "dateTime": "2026-02-04T12:30:00Z",
+        "transactions": {
+          "coinbase": "720000000000",
+          "userCommands": [
+            {
+              "hash": "CkpZwt1Hy1Dv2HnKfBMwQJRj4hXBRfNVqy8xPZw2TnEq5wDKdJrWp",
+              "kind": "PAYMENT",
+              "from": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+              "to": "B62qpge4uMq4Vv5Rvc8Gw9qSquUYd6xoW1pz7HQkMSHm6h1o7pvLPAN",
+              "amount": "1000000000",
+              "fee": "10000000",
+              "memo": "VGVzdCBwYXltZW50",
+              "nonce": 123,
+              "failureReason": null
+            },
+            {
+              "hash": "CkpZwt1Hy1Dv2HnKfBMwQJRj4hXBRfNVqy8xPZw2TnEq5wDKdJrWq",
+              "kind": "STAKE_DELEGATION",
+              "from": "B62qoG5Yk4iVxpyczUrBNpwtx2xunPhxfG7yYA3xYBPJeRbABxvWC3K",
+              "to": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+              "amount": "0",
+              "fee": "5000000",
+              "memo": "",
+              "nonce": 456,
+              "failureReason": null
+            }
+          ],
+          "zkappCommands": [
+            {
+              "hash": "5JuZkApp8jyKPXgVcNnQxD9JKMVLR4GzTxNHr6FqE3mYBdWy7ScPv",
+              "failureReasons": null,
+              "zkappCommand": {
+                "memo": "emtBcHAgdHJhbnNhY3Rpb24=",
+                "feePayer": {
+                  "body": {
+                    "publicKey": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+                    "fee": "100000000"
+                  }
+                },
+                "accountUpdates": [
+                  {
+                    "body": {
+                      "publicKey": "B62qpge4uMq4Vv5Rvc8Gw9qSquUYd6xoW1pz7HQkMSHm6h1o7pvLPAN",
+                      "tokenId": "wSHV2S4qX9jFsLjQo8r1BsMLH2ZRKsZx6EJd1sbozGPieEC4Jf",
+                      "balanceChange": {
+                        "magnitude": "0",
+                        "sgn": "Positive"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "feeTransfer": [
+            {
+              "recipient": "B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg",
+              "fee": "15000000",
+              "type": "Fee_transfer"
+            },
+            {
+              "recipient": "B62qoG5Yk4iVxpyczUrBNpwtx2xunPhxfG7yYA3xYBPJeRbABxvWC3K",
+              "fee": "5000000",
+              "type": "Fee_transfer_via_coinbase"
+            }
+          ]
+        }
+      }
+    ],
+    "networkState": {
+      "maxBlockHeight": {
+        "canonicalMaxBlockHeight": 432148
+      }
+    }
+  }
+}
