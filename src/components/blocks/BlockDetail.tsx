@@ -116,17 +116,20 @@ export function BlockDetail({
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-muted-foreground">Coinbase Reward</span>
-                  <Amount value={block.transactions?.coinbase || '0'} />
+                  <Amount
+                    value={block.transactions?.coinbase || '0'}
+                    showFiat
+                  />
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-muted-foreground">
                     Transaction Fees
                   </span>
-                  <Amount value={block.txFees || '0'} />
+                  <Amount value={block.txFees || '0'} showFiat />
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-muted-foreground">Snark Fees</span>
-                  <Amount value={block.snarkFees || '0'} />
+                  <Amount value={block.snarkFees || '0'} showFiat />
                 </div>
               </div>
             </div>
