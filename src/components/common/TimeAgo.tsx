@@ -15,11 +15,11 @@ export function TimeAgo({
 
   if (showTooltip) {
     return (
-      <span title={fullDate} className="text-muted">
+      <span title={fullDate} className="text-muted-foreground">
         {timeAgo}
       </span>
     );
   }
 
-  return <span className="text-muted">{timeAgo}</span>;
+  return <span className="text-muted-foreground">{timeAgo}</span>;
 }

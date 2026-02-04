@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PaginationProps {
   currentPage: number;
@@ -28,75 +30,80 @@ export function Pagination({
     pages.push(i);
   }
 
+  const buttonBase =
+    'inline-flex h-9 min-w-9 items-center justify-center rounded-md border text-sm font-medium transition-colors';
+  const buttonEnabled =
+    'border-input bg-background hover:bg-accent hover:text-accent-foreground';
+  const buttonDisabled =
+    'border-input bg-background text-muted-foreground cursor-not-allowed opacity-50';
+  const buttonActive = 'border-primary bg-primary text-primary-foreground';
+
   return (
-    <nav aria-label="Page navigation">
-      <ul className="pagination justify-content-center mb-0">
-        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-          <button
-            className="page-link"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            Prev
-          </button>
-        </li>
+    <nav aria-label="Page navigation" className="flex justify-center">
+      <div className="flex items-center gap-1">
+        <button
+          className={cn(buttonBase, currentPage === 1 ? buttonDisabled : buttonEnabled, 'px-2')}
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft size={16} />
+          <span className="hidden sm:inline">Prev</span>
+        </button>
 
         {startPage > 1 && (
           <>
-            <li className="page-item">
-              <button className="page-link" onClick={() => onPageChange(1)}>
-                1
-              </button>
-            </li>
+            <button
+              className={cn(buttonBase, buttonEnabled)}
+              onClick={() => onPageChange(1)}
+            >
+              1
+            </button>
             {startPage > 2 && (
-              <li className="page-item disabled">
-                <span className="page-link">...</span>
-              </li>
+              <span className={cn(buttonBase, buttonDisabled)}>...</span>
             )}
           </>
         )}
 
         {pages.map(page => (
-          <li
+          <button
             key={page}
-            className={`page-item ${page === currentPage ? 'active' : ''}`}
+            className={cn(
+              buttonBase,
+              page === currentPage ? buttonActive : buttonEnabled,
+            )}
+            onClick={() => onPageChange(page)}
           >
-            <button className="page-link" onClick={() => onPageChange(page)}>
-              {page}
-            </button>
-          </li>
+            {page}
+          </button>
         ))}
 
         {endPage < totalPages && (
           <>
             {endPage < totalPages - 1 && (
-              <li className="page-item disabled">
-                <span className="page-link">...</span>
-              </li>
+              <span className={cn(buttonBase, buttonDisabled)}>...</span>
             )}
-            <li className="page-item">
-              <button
-                className="page-link"
-                onClick={() => onPageChange(totalPages)}
-              >
-                {totalPages}
-              </button>
-            </li>
+            <button
+              className={cn(buttonBase, buttonEnabled)}
+              onClick={() => onPageChange(totalPages)}
+            >
+              {totalPages}
+            </button>
           </>
         )}
 
-        <li
-          className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
+        <button
+          className={cn(
+            buttonBase,
+            currentPage === totalPages ? buttonDisabled : buttonEnabled,
+            'px-2',
+          )}
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
         >
-          <button
-            className="page-link"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </li>
-      </ul>
+          <span className="hidden sm:inline">Next</span>
+          <ChevronRight size={16} />
+        </button>
+      </div>
     </nav>
   );
 }

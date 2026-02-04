@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { formatMina } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 
 interface AmountProps {
   value: string | number;
@@ -15,7 +16,7 @@ export function Amount({
   const formatted = formatMina(value);
 
   return (
-    <span className={`font-monospace ${className}`}>
+    <span className={cn('font-mono tabular-nums', className)}>
       {formatted} {symbol}
     </span>
   );

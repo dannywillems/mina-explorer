@@ -29,7 +29,10 @@ export function HashLink({
         : hash;
 
   return (
-    <Link to={pathMap[type]} className="font-monospace text-decoration-none">
+    <Link
+      to={pathMap[type]}
+      className="font-mono text-primary hover:underline"
+    >
       {displayText}
     </Link>
   );
