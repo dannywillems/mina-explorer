@@ -5,4 +5,5 @@ export { TransactionsPage } from './TransactionsPage';
 export { TransactionDetailPage } from './TransactionDetailPage';
 export { AccountsPage } from './AccountsPage';
 export { AccountPage } from './AccountPage';
+export { StakingPage } from './StakingPage';
 export { NotFoundPage } from './NotFoundPage';
