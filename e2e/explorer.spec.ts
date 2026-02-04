@@ -843,3 +843,62 @@ test.describe('zkApps Page', () => {
     await expect(table.or(noActivity)).toBeVisible({ timeout: 15000 });
   });
 });
+
+test.describe('MINA Price Display', () => {
+  test('header shows MINA price', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for price to load (mocked at $0.5432)
+    // The price display shows "MINA $X.XX" - use first() for desktop header
+    await expect(
+      page.locator('header').locator('text=/MINA.*\\$[0-9]/i').first(),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test('price shows 24h change indicator', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for page to load
+    await expect(page.locator('header')).toBeVisible();
+
+    // Look for percentage change (mocked at 2.35%) in header
+    // Should show something like "2.3%" with up/down indicator
+    await expect(
+      page.locator('header').locator('text=/[0-9]+\\.[0-9]%/i').first(),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+  });
+});
+
+test.describe('Fiat Value Display', () => {
+  test('block detail shows fiat values for coinbase', async ({ page }) => {
+    await page.goto('/#/block/432150');
+
+    // Wait for block details to load
+    await expect(page.locator('text=Coinbase Reward')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check that fiat value is displayed (format: "720.00 MINA ($XXX.XX)")
+    // Look for the parenthesized fiat amount
+    await expect(page.locator('text=/\\(\\$[0-9]/i').first()).toBeVisible();
+  });
+});
+
+test.describe('Transaction Not Found', () => {
+  test('shows error message when transaction not found', async ({ page }) => {
+    // Navigate to a non-existent transaction
+    await page.goto('/#/transaction/5JuInvalidHashThatDoesNotExist123456789');
+
+    // Wait for search to complete - should show "Transaction Not Found" or error
+    const notFound = page.locator('text=/Transaction Not Found/i');
+    const error = page.locator('text=/not found/i');
+
+    await expect(notFound.or(error)).toBeVisible({
+      timeout: 20000,
+    });
+  });
+});

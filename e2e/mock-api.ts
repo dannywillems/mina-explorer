@@ -32,6 +32,57 @@ export async function setupApiMocks(page: Page): Promise<void> {
   // Mock daemon GraphQL endpoints (all networks)
   // Patterns: *-plain-*.gcp.o1test.net/graphql
   await page.route('**/*plain*.gcp.o1test.net/graphql', handleDaemonRequest);
+
+  // Mock CoinGecko price API
+  await page.route('**/api.coingecko.com/**', handlePriceRequest);
+}
+
+/**
+ * Mock CoinGecko price data
+ */
+const MOCK_PRICE_DATA = {
+  'mina-protocol': {
+    usd: 0.5432,
+    eur: 0.4987,
+    usd_24h_change: 2.35,
+    eur_24h_change: 2.12,
+  },
+};
+
+/**
+ * Handle CoinGecko price API requests
+ */
+async function handlePriceRequest(route: Route): Promise<void> {
+  const url = route.request().url();
+
+  // Current price request
+  if (url.includes('/simple/price')) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_PRICE_DATA),
+    });
+    return;
+  }
+
+  // Historical price request
+  if (url.includes('/history')) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        market_data: {
+          current_price: {
+            usd: 0.52,
+            eur: 0.48,
+          },
+        },
+      }),
+    });
+    return;
+  }
+
+  await route.continue();
 }
 
 /**
