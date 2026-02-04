@@ -1,69 +1,82 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { useBlocks } from '@/hooks';
 import { HashLink, TimeAgo, Amount, LoadingSpinner } from '@/components/common';
 import { formatNumber } from '@/utils/formatters';
+import { cn } from '@/lib/utils';
 
 export function RecentBlocks(): ReactNode {
   const { blocks, loading, error, refresh } = useBlocks(10);
 
   return (
-    <div className="card h-100">
-      <div className="card-header d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Recent Blocks</h5>
-        <div>
+    <div className="rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h2 className="text-lg font-semibold">Recent Blocks</h2>
+        <div className="flex items-center gap-2">
           <button
-            className="btn btn-sm btn-outline-secondary me-2"
+            className={cn(
+              'inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent',
+              loading && 'opacity-50',
+            )}
             onClick={refresh}
             disabled={loading}
           >
+            <RefreshCw size={14} className={cn(loading && 'animate-spin')} />
             Refresh
           </button>
-          <Link to="/blocks" className="btn btn-sm btn-primary">
+          <Link
+            to="/blocks"
+            className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
             View All
           </Link>
         </div>
       </div>
-      <div className="card-body p-0">
+
+      <div className="p-0">
         {loading ? (
           <LoadingSpinner text="Loading blocks..." />
         ) : error ? (
-          <div className="alert alert-danger m-3" role="alert">
+          <div className="m-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
               <thead>
-                <tr>
-                  <th>Height</th>
-                  <th>Producer</th>
-                  <th className="text-end">Coinbase</th>
-                  <th>Time</th>
+                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3">Height</th>
+                  <th className="px-4 py-3">Producer</th>
+                  <th className="px-4 py-3 text-right">Coinbase</th>
+                  <th className="px-4 py-3">Time</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {blocks.map(block => (
-                  <tr key={block.stateHash}>
-                    <td>
+                  <tr
+                    key={block.stateHash}
+                    className="transition-colors hover:bg-accent/50"
+                  >
+                    <td className="px-4 py-3">
                       <Link
                         to={`/block/${block.blockHeight}`}
-                        className="fw-semibold"
+                        className="font-medium text-primary hover:underline"
                       >
                         {formatNumber(block.blockHeight)}
                       </Link>
                     </td>
-                    <td>
+                    <td className="px-4 py-3">
                       <HashLink
                         hash={block.creator}
                         type="account"
                         prefixLength={6}
                       />
                     </td>
-                    <td className="text-end">
+                    <td className="px-4 py-3 text-right">
                       <Amount value={block.coinbase || '0'} />
                     </td>
-                    <td>
+                    <td className="px-4 py-3">
                       <TimeAgo dateTime={block.dateTime} />
                     </td>
                   </tr>

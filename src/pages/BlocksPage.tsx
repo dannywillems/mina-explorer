@@ -1,19 +1,25 @@
 import type { ReactNode } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useBlocks } from '@/hooks';
 import { BlockList } from '@/components/blocks';
+import { cn } from '@/lib/utils';
 
 export function BlocksPage(): ReactNode {
   const { blocks, loading, error, refresh } = useBlocks(50);
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Blocks</h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Blocks</h1>
         <button
-          className="btn btn-outline-secondary"
+          className={cn(
+            'inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent',
+            loading && 'opacity-50',
+          )}
           onClick={refresh}
           disabled={loading}
         >
+          <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
           Refresh
         </button>
       </div>

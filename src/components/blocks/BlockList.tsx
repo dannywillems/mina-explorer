@@ -21,7 +21,7 @@ export function BlockList({
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
+      <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -29,45 +29,48 @@ export function BlockList({
 
   if (blocks.length === 0) {
     return (
-      <div className="alert alert-info" role="alert">
+      <div className="rounded-md bg-primary/10 p-4 text-sm text-primary">
         No blocks found.
       </div>
     );
   }
 
   return (
-    <div className="table-responsive">
-      <table className="table table-hover">
+    <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <table className="w-full">
         <thead>
-          <tr>
-            <th>Height</th>
-            <th>State Hash</th>
-            <th>Block Producer</th>
-            <th>Time</th>
-            <th className="text-end">Coinbase</th>
+          <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <th className="px-4 py-3">Height</th>
+            <th className="px-4 py-3">State Hash</th>
+            <th className="px-4 py-3">Block Producer</th>
+            <th className="px-4 py-3">Time</th>
+            <th className="px-4 py-3 text-right">Coinbase</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-border">
           {blocks.map(block => (
-            <tr key={block.stateHash}>
-              <td>
+            <tr
+              key={block.stateHash}
+              className="transition-colors hover:bg-accent/50"
+            >
+              <td className="px-4 py-3">
                 <Link
                   to={`/block/${block.blockHeight}`}
-                  className="fw-semibold"
+                  className="font-medium text-primary hover:underline"
                 >
                   {formatNumber(block.blockHeight)}
                 </Link>
               </td>
-              <td>
+              <td className="px-4 py-3">
                 <HashLink hash={block.stateHash} type="block" />
               </td>
-              <td>
+              <td className="px-4 py-3">
                 <HashLink hash={block.creator} type="account" />
               </td>
-              <td>
+              <td className="px-4 py-3">
                 <TimeAgo dateTime={block.dateTime} />
               </td>
-              <td className="text-end">
+              <td className="px-4 py-3 text-right">
                 <Amount value={block.coinbase || '0'} />
               </td>
             </tr>

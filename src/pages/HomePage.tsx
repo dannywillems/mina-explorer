@@ -13,29 +13,23 @@ export function HomePage(): ReactNode {
       : `${import.meta.env.BASE_URL}mina-logo-dark.svg`;
 
   return (
-    <div>
-      <div className="text-center mb-4">
-        <h1 className="mb-3 d-flex align-items-center justify-content-center">
-          <img src={logoSrc} alt="Mina" height="40" className="me-3" />
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="mb-3 flex items-center justify-center gap-3 text-3xl font-bold">
+          <img src={logoSrc} alt="Mina" className="h-10" />
           Explorer
         </h1>
-        <p className="text-muted mb-4">
+        <p className="mb-6 text-muted-foreground">
           Explore blocks on the Mina Protocol network.
         </p>
-        <div className="row justify-content-center">
-          <div className="col-md-8 col-lg-6">
-            <SearchBar />
-          </div>
+        <div className="mx-auto max-w-xl">
+          <SearchBar />
         </div>
       </div>
 
-      <div className="mb-4">
-        <NetworkStats />
-      </div>
+      <NetworkStats />
 
-      <div>
-        <RecentBlocks />
-      </div>
+      <RecentBlocks />
     </div>
   );
 }
