@@ -19,3 +19,4 @@ export {
   useTransaction,
   useAccountTransactions,
 } from './useTransactions';
+export { usePrice } from './usePrice';

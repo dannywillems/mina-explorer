@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { NetworkSelector } from './NetworkSelector';
 import { ThemeToggle } from './ThemeToggle';
+import { PriceDisplay } from './PriceDisplay';
 import { cn } from '@/lib/utils';
 
 export function Header(): ReactNode {
@@ -66,6 +67,7 @@ export function Header(): ReactNode {
 
           {/* Desktop Actions */}
           <div className="hidden items-center gap-3 md:flex">
+            <PriceDisplay />
             <SearchBar />
             <ThemeToggle />
             <NetworkSelector />
@@ -125,6 +127,7 @@ export function Header(): ReactNode {
             </Link>
           </nav>
           <div className="mt-4 flex flex-col gap-3">
+            <PriceDisplay />
             <SearchBar />
             <div className="flex items-center gap-3">
               <ThemeToggle />

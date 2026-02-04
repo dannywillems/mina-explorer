@@ -9,3 +9,4 @@ export { LoadingSpinner } from './LoadingSpinner';
 export { HashLink } from './HashLink';
 export { TimeAgo } from './TimeAgo';
 export { Amount } from './Amount';
+export { PriceDisplay } from './PriceDisplay';
