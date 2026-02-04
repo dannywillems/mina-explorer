@@ -42,7 +42,13 @@ export function ThemeProvider({ children }: ThemeProviderProps): ReactNode {
 
   useEffect(() => {
     // Apply theme to document
-    document.documentElement.setAttribute('data-bs-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    // Add/remove dark class for Tailwind
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 

@@ -5,9 +5,9 @@ import { Footer } from './Footer';
 
 export function Layout(): ReactNode {
   return (
-    <div className="d-flex flex-column min-vh-100">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <main className="container py-4 flex-grow-1">
+      <main className="container mx-auto grow px-4 py-6">
         <Outlet />
       </main>
       <Footer />

@@ -1,5 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { Search } from 'lucide-react';
 import { useSearch } from '@/hooks';
+import { cn } from '@/lib/utils';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -29,11 +31,14 @@ export function SearchBar({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={className}>
-      <div className="input-group">
+    <form onSubmit={handleSubmit} className={cn('relative', className)}>
+      <div className="flex">
         <input
           type="text"
-          className={`form-control ${error ? 'is-invalid' : ''}`}
+          className={cn(
+            'h-9 w-full min-w-[200px] rounded-l-md border border-r-0 border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring',
+            error && 'border-destructive focus:ring-destructive',
+          )}
           placeholder={placeholder}
           value={query}
           onChange={e => {
@@ -41,11 +46,17 @@ export function SearchBar({
             setError(null);
           }}
         />
-        <button className="btn btn-primary" type="submit">
-          Search
+        <button
+          className="inline-flex h-9 items-center gap-2 rounded-r-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          type="submit"
+        >
+          <Search size={16} />
+          <span className="hidden sm:inline">Search</span>
         </button>
       </div>
-      {error && <div className="invalid-feedback d-block">{error}</div>}
+      {error && (
+        <p className="mt-1 text-xs text-destructive">{error}</p>
+      )}
     </form>
   );
 }
