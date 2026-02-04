@@ -752,6 +752,46 @@ test.describe('Staking Page', () => {
     // Check for "Top Producer" badge on first row
     await expect(page.locator('text=Top Producer')).toBeVisible();
   });
+
+  test('staking page shows time period selector', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Wait for page to load
+    await expect(page.locator('text=Time period:')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Check for time period buttons
+    await expect(page.locator('button').filter({ hasText: 'Last 24 hours' })).toBeVisible();
+    await expect(page.locator('button').filter({ hasText: 'Last 7 days' })).toBeVisible();
+    await expect(page.locator('button').filter({ hasText: 'Last 30 days' })).toBeVisible();
+    await expect(page.locator('button').filter({ hasText: /Last epoch/i })).toBeVisible();
+  });
+
+  test('staking page time period selector changes data', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Wait for initial load (default is 7 days)
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Click on "Last 24 hours"
+    await page.locator('button').filter({ hasText: 'Last 24 hours' }).click();
+
+    // Wait for new data to load - check that "Blocks in Period" stat is visible
+    await expect(page.locator('text=Blocks in Period')).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test('staking page shows date range info', async ({ page }) => {
+    await page.goto('/#/staking');
+
+    // Wait for table to load
+    await expect(page.locator('table')).toBeVisible({ timeout: 15000 });
+
+    // Check for date range display
+    await expect(page.locator('text=/Showing data from/i')).toBeVisible();
+  });
 });
 
 test.describe('zkApps Page', () => {

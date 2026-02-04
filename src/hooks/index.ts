@@ -7,7 +7,12 @@ export {
 export { useSearch } from './useSearch';
 export { useNetwork } from './useNetwork';
 export { useAccount } from './useAccount';
-export { useTopBlockProducers } from './useTopBlockProducers';
+export {
+  useTopBlockProducers,
+  useBlockProducersByPeriod,
+  TIME_PERIOD_OPTIONS,
+  type TimePeriod,
+} from './useTopBlockProducers';
 export {
   usePendingTransactions,
   usePendingZkAppCommands,

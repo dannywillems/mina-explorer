@@ -597,3 +597,101 @@ export async function fetchTopBlockProducers(
 
   return sorted;
 }
+
+// Query blocks by date range for historical analysis
+// GraphQL query:
+//   query GetBlocksByDateRange($startDate: DateTime!, $endDate: DateTime!, $limit: Int!) {
+//     blocks(
+//       query: { dateTime_gte: $startDate, dateTime_lte: $endDate }
+//       limit: $limit
+//       sortBy: BLOCKHEIGHT_DESC
+//     ) { creator, blockHeight, dateTime }
+//   }
+const BLOCKS_BY_DATE_QUERY = `
+  query GetBlocksByDateRange($startDate: DateTime!, $endDate: DateTime!, $limit: Int!) {
+    blocks(
+      query: { dateTime_gte: $startDate, dateTime_lte: $endDate }
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      creator
+      blockHeight
+      dateTime
+    }
+  }
+`;
+
+interface BlocksByDateResponse {
+  blocks: Array<{ creator: string; blockHeight: number; dateTime: string }>;
+}
+
+export interface TopBlockProducerWithPeriod extends TopBlockProducer {
+  firstBlockTime: string;
+  lastBlockTime: string;
+}
+
+export interface BlockProducersResult {
+  producers: TopBlockProducerWithPeriod[];
+  totalBlocks: number;
+  startDate: string;
+  endDate: string;
+}
+
+export async function fetchBlockProducersByDateRange(
+  startDate: Date,
+  endDate: Date,
+  topN: number = 25,
+): Promise<BlockProducersResult> {
+  const client = getClient();
+
+  // Fetch blocks in the date range (limit to 10000 to avoid timeout)
+  const data = await client.query<BlocksByDateResponse>(BLOCKS_BY_DATE_QUERY, {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    limit: 10000,
+  });
+
+  // Count blocks per creator and track time ranges
+  const producerStats = new Map<
+    string,
+    { count: number; firstBlockTime: string; lastBlockTime: string }
+  >();
+
+  for (const block of data.blocks) {
+    const existing = producerStats.get(block.creator);
+    if (existing) {
+      existing.count++;
+      // Track earliest and latest block times
+      if (block.dateTime < existing.firstBlockTime) {
+        existing.firstBlockTime = block.dateTime;
+      }
+      if (block.dateTime > existing.lastBlockTime) {
+        existing.lastBlockTime = block.dateTime;
+      }
+    } else {
+      producerStats.set(block.creator, {
+        count: 1,
+        firstBlockTime: block.dateTime,
+        lastBlockTime: block.dateTime,
+      });
+    }
+  }
+
+  // Sort by count and return top N
+  const sorted = Array.from(producerStats.entries())
+    .map(([publicKey, stats]) => ({
+      publicKey,
+      blocksProduced: stats.count,
+      firstBlockTime: stats.firstBlockTime,
+      lastBlockTime: stats.lastBlockTime,
+    }))
+    .sort((a, b) => b.blocksProduced - a.blocksProduced)
+    .slice(0, topN);
+
+  return {
+    producers: sorted,
+    totalBlocks: data.blocks.length,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+}
