@@ -240,3 +240,47 @@ export async function fetchNetworkState(): Promise<NetworkState> {
   const data = await client.query<NetworkStateResponse>(NETWORK_STATE_QUERY);
   return data.networkState;
 }
+
+export interface TopBlockProducer {
+  publicKey: string;
+  blocksProduced: number;
+}
+
+const TOP_PRODUCERS_QUERY = `
+  query GetTopProducers($limit: Int!) {
+    blocks(
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      creator
+    }
+  }
+`;
+
+interface TopProducersResponse {
+  blocks: Array<{ creator: string }>;
+}
+
+export async function fetchTopBlockProducers(
+  sampleSize: number = 500,
+  topN: number = 10,
+): Promise<TopBlockProducer[]> {
+  const client = getClient();
+  const data = await client.query<TopProducersResponse>(TOP_PRODUCERS_QUERY, {
+    limit: sampleSize,
+  });
+
+  // Count blocks per creator
+  const counts = new Map<string, number>();
+  for (const block of data.blocks) {
+    counts.set(block.creator, (counts.get(block.creator) || 0) + 1);
+  }
+
+  // Sort by count and return top N
+  const sorted = Array.from(counts.entries())
+    .map(([publicKey, blocksProduced]) => ({ publicKey, blocksProduced }))
+    .sort((a, b) => b.blocksProduced - a.blocksProduced)
+    .slice(0, topN);
+
+  return sorted;
+}

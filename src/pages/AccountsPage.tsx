@@ -3,27 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { isValidPublicKey, formatHash } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
-
-// Notable accounts / whales for easy access (mainnet)
-const NOTABLE_ACCOUNTS = [
-  {
-    name: 'o1Labs',
-    publicKey: 'B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg',
-  },
-  {
-    name: 'Binance',
-    publicKey: 'B62qrRvo5wngd5WA1dgXkQpCdQMRDndusmjfWXWT1LgsSFFdBS9RCsV',
-  },
-  {
-    name: 'Coinbase',
-    publicKey: 'B62qpge4uMq4Vv5Rvc8Gw9qSquUYd6xoW1pz7HQkMSHm6h1o7pvLPAN',
-  },
-];
+import { useTopBlockProducers, useNetwork } from '@/hooks';
+import { LoadingSpinner } from '@/components/common';
 
 export function AccountsPage(): ReactNode {
   const [publicKey, setPublicKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { network } = useNetwork();
+  const {
+    producers,
+    loading: producersLoading,
+    error: producersError,
+  } = useTopBlockProducers(500, 10);
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
@@ -94,40 +86,55 @@ export function AccountsPage(): ReactNode {
 
       <div className="rounded-lg border border-border bg-card">
         <div className="border-b border-border px-6 py-4">
-          <h2 className="font-semibold">Notable Accounts</h2>
+          <h2 className="font-semibold">Top Block Producers</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Most active block producers on {network.displayName} (last 500
+            blocks)
+          </p>
         </div>
         <div className="p-6">
-          <p className="mb-4 text-muted-foreground">
-            Quick links to notable Mina accounts and whales.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Public Key</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {NOTABLE_ACCOUNTS.map(account => (
-                  <tr
-                    key={account.publicKey}
-                    className="transition-colors hover:bg-accent/50"
-                  >
-                    <td className="px-4 py-3 font-medium">{account.name}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/account/${account.publicKey}`}
-                        className="font-mono text-primary hover:underline"
-                      >
-                        {formatHash(account.publicKey, 8)}
-                      </Link>
-                    </td>
+          {producersLoading ? (
+            <LoadingSpinner text="Loading top producers..." />
+          ) : producersError ? (
+            <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
+              {producersError}
+            </div>
+          ) : producers.length === 0 ? (
+            <p className="text-muted-foreground">No block producers found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3">Rank</th>
+                    <th className="px-4 py-3">Public Key</th>
+                    <th className="px-4 py-3 text-right">Blocks Produced</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {producers.map((producer, index) => (
+                    <tr
+                      key={producer.publicKey}
+                      className="transition-colors hover:bg-accent/50"
+                    >
+                      <td className="px-4 py-3 font-medium">{index + 1}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/account/${producer.publicKey}`}
+                          className="font-mono text-primary hover:underline"
+                        >
+                          {formatHash(producer.publicKey, 8)}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        {producer.blocksProduced}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
