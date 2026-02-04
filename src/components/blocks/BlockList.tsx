@@ -47,6 +47,7 @@ export function BlockList({
             <th className="px-4 py-3">Block Producer</th>
             <th className="px-4 py-3">Time</th>
             <th className="px-4 py-3 text-right">Coinbase</th>
+            <th className="px-4 py-3 text-right">Snark Fees</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -88,6 +89,9 @@ export function BlockList({
               </td>
               <td className="px-4 py-3 text-right">
                 <Amount value={block.coinbase || '0'} />
+              </td>
+              <td className="px-4 py-3 text-right">
+                <Amount value={block.snarkFees || '0'} />
               </td>
             </tr>
           ))}

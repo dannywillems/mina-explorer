@@ -14,7 +14,14 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": [
+            {
+              "recipient": "B62qnzkS7LNoSMY5fZ7zWTCDcKDqWvJU5MvLQrWV8VFCuRYEbGcR4P9",
+              "fee": "50000000",
+              "type": "Fee_transfer"
+            }
+          ]
         }
       },
       {
@@ -30,7 +37,19 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": [
+            {
+              "recipient": "B62qmVsYbzT4TmYvBmRLBPwXk1dFurKGJLBvRFBqCtqTPCraJhFZxKW",
+              "fee": "25000000",
+              "type": "Fee_transfer"
+            },
+            {
+              "recipient": "B62qnzkS7LNoSMY5fZ7zWTCDcKDqWvJU5MvLQrWV8VFCuRYEbGcR4P9",
+              "fee": "25000000",
+              "type": "Fee_transfer"
+            }
+          ]
         }
       },
       {
@@ -46,7 +65,8 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": []
         }
       },
       {
@@ -62,7 +82,14 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": [
+            {
+              "recipient": "B62qmVsYbzT4TmYvBmRLBPwXk1dFurKGJLBvRFBqCtqTPCraJhFZxKW",
+              "fee": "75000000",
+              "type": "Fee_transfer"
+            }
+          ]
         }
       },
       {
@@ -78,7 +105,8 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": []
         }
       },
       {
@@ -94,7 +122,14 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": [
+            {
+              "recipient": "B62qnzkS7LNoSMY5fZ7zWTCDcKDqWvJU5MvLQrWV8VFCuRYEbGcR4P9",
+              "fee": "100000000",
+              "type": "Fee_transfer"
+            }
+          ]
         }
       },
       {
@@ -110,7 +145,8 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": []
         }
       },
       {
@@ -126,7 +162,8 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": []
         }
       },
       {
@@ -142,7 +179,14 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": [
+            {
+              "recipient": "B62qmVsYbzT4TmYvBmRLBPwXk1dFurKGJLBvRFBqCtqTPCraJhFZxKW",
+              "fee": "30000000",
+              "type": "Fee_transfer"
+            }
+          ]
         }
       },
       {
@@ -158,7 +202,8 @@
           }
         },
         "transactions": {
-          "coinbase": "720000000000"
+          "coinbase": "720000000000",
+          "feeTransfer": []
         }
       }
     ],

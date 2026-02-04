@@ -50,12 +50,11 @@ async function handleArchiveRequest(route: Route): Promise<void> {
     const body = JSON.parse(postData);
     const query = body.query || '';
 
-    // Handle block detail queries (with userCommands, zkappCommands, feeTransfer)
+    // Handle block detail queries (with userCommands or zkappCommands)
+    // Note: feeTransfer alone is not sufficient as block list queries also include it
     if (
       query.includes('blocks') &&
-      (query.includes('userCommands') ||
-        query.includes('zkappCommands') ||
-        query.includes('feeTransfer'))
+      (query.includes('userCommands') || query.includes('zkappCommands'))
     ) {
       await route.fulfill({
         status: 200,
