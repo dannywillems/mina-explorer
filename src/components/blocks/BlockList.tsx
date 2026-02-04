@@ -22,7 +22,6 @@ export function BlockList({
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-        <i className="bi bi-exclamation-triangle me-2"></i>
         {error}
       </div>
     );

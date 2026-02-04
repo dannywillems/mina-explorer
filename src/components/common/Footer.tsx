@@ -40,7 +40,7 @@ export function Footer(): ReactNode {
                 rel="noopener noreferrer"
                 className="text-muted me-3"
               >
-                <i className="bi bi-github"></i> GitHub
+                GitHub
               </a>
               <a
                 href="https://twitter.com/oaborisov"
@@ -48,7 +48,7 @@ export function Footer(): ReactNode {
                 rel="noopener noreferrer"
                 className="text-muted"
               >
-                <i className="bi bi-twitter-x"></i> Twitter
+                Twitter
               </a>
             </p>
           </div>

@@ -22,7 +22,6 @@ export function NetworkStats(): ReactNode {
       <div className="card">
         <div className="card-body">
           <div className="alert alert-danger mb-0" role="alert">
-            <i className="bi bi-exclamation-triangle me-2"></i>
             Failed to load network stats
           </div>
         </div>
@@ -35,10 +34,7 @@ export function NetworkStats(): ReactNode {
       <div className="col-md-4">
         <div className="card h-100">
           <div className="card-body text-center">
-            <div className="text-muted mb-1">
-              <i className="bi bi-hdd-network me-1"></i>
-              Network
-            </div>
+            <div className="text-muted mb-1">Network</div>
             <h4 className="mb-0">
               {network.displayName}
               {network.isTestnet && (
@@ -53,10 +49,7 @@ export function NetworkStats(): ReactNode {
       <div className="col-md-4">
         <div className="card h-100">
           <div className="card-body text-center">
-            <div className="text-muted mb-1">
-              <i className="bi bi-boxes me-1"></i>
-              Block Height
-            </div>
+            <div className="text-muted mb-1">Block Height</div>
             <h4 className="mb-0 font-monospace">
               {formatNumber(
                 networkState.maxBlockHeight.canonicalMaxBlockHeight,
@@ -68,10 +61,7 @@ export function NetworkStats(): ReactNode {
       <div className="col-md-4">
         <div className="card h-100">
           <div className="card-body text-center">
-            <div className="text-muted mb-1">
-              <i className="bi bi-clock-history me-1"></i>
-              Pending Height
-            </div>
+            <div className="text-muted mb-1">Pending Height</div>
             <h4 className="mb-0 font-monospace">
               {formatNumber(networkState.maxBlockHeight.pendingMaxBlockHeight)}
             </h4>

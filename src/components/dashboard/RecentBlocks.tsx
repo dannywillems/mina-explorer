@@ -10,17 +10,14 @@ export function RecentBlocks(): ReactNode {
   return (
     <div className="card h-100">
       <div className="card-header d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">
-          <i className="bi bi-boxes me-2"></i>
-          Recent Blocks
-        </h5>
+        <h5 className="mb-0">Recent Blocks</h5>
         <div>
           <button
             className="btn btn-sm btn-outline-secondary me-2"
             onClick={refresh}
             disabled={loading}
           >
-            <i className="bi bi-arrow-clockwise"></i>
+            Refresh
           </button>
           <Link to="/blocks" className="btn btn-sm btn-primary">
             View All

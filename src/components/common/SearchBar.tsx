@@ -42,7 +42,7 @@ export function SearchBar({
           }}
         />
         <button className="btn btn-primary" type="submit">
-          <i className="bi bi-search"></i>
+          Search
         </button>
       </div>
       {error && <div className="invalid-feedback d-block">{error}</div>}

@@ -33,7 +33,6 @@ export function Header(): ReactNode {
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
               <Link to="/blocks" className="nav-link">
-                <i className="bi bi-boxes me-1"></i>
                 Blocks
               </Link>
             </li>

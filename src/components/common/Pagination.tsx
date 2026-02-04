@@ -37,7 +37,7 @@ export function Pagination({
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
           >
-            <i className="bi bi-chevron-left"></i>
+            Prev
           </button>
         </li>
 
@@ -93,7 +93,7 @@ export function Pagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
           >
-            <i className="bi bi-chevron-right"></i>
+            Next
           </button>
         </li>
       </ul>

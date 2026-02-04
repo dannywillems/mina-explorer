@@ -178,7 +178,7 @@ test.describe('Mina Explorer', () => {
     await expect(tableRows.first()).toBeVisible({ timeout: 15000 });
 
     // Click refresh button
-    const refreshButton = page.locator('button:has(.bi-arrow-clockwise)');
+    const refreshButton = page.locator('button:has-text("Refresh")');
     await refreshButton.click();
 
     // Blocks should still be visible after refresh
@@ -212,7 +212,9 @@ test.describe('Network Picker', () => {
     await expect(networkButton).toContainText('Mesa');
 
     // Check that testnet badge is shown
-    await expect(networkButton.locator('.badge:has-text("Testnet")')).toBeVisible();
+    await expect(
+      networkButton.locator('.badge:has-text("Testnet")'),
+    ).toBeVisible();
   });
 
   test('can switch to Devnet', async ({ page }) => {
@@ -244,7 +246,9 @@ test.describe('Network Picker', () => {
     ).toBeVisible();
 
     // Wait for data to reload with new network
-    await expect(blockHeightCard.locator('h4')).not.toBeEmpty({ timeout: 15000 });
+    await expect(blockHeightCard.locator('h4')).not.toBeEmpty({
+      timeout: 15000,
+    });
   });
 
   test('can switch to Mainnet', async ({ page }) => {

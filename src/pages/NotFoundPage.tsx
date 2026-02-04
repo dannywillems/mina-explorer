@@ -10,7 +10,6 @@ export function NotFoundPage(): ReactNode {
         The page you are looking for does not exist.
       </p>
       <Link to="/" className="btn btn-primary">
-        <i className="bi bi-house me-2"></i>
         Go to Homepage
       </Link>
     </div>
