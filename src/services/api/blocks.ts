@@ -2,6 +2,7 @@ import { getClient } from './client';
 import type { BlockSummary, BlockDetail, NetworkState } from '@/types';
 
 // Full query with protocolState and networkState (for nodes that support it)
+// Note: feeTransfer is not available in block list queries, only in block detail
 const BLOCKS_QUERY_FULL = `
   query GetBlocksFull($limit: Int!) {
     blocks(
@@ -21,11 +22,6 @@ const BLOCKS_QUERY_FULL = `
       }
       transactions {
         coinbase
-        feeTransfer {
-          recipient
-          fee
-          type
-        }
       }
     }
     networkState {
@@ -49,11 +45,6 @@ const BLOCKS_QUERY_BASIC = `
       dateTime
       transactions {
         coinbase
-        feeTransfer {
-          recipient
-          fee
-          type
-        }
       }
     }
     networkState {
@@ -78,11 +69,6 @@ const BLOCKS_QUERY_PAGINATED = `
       dateTime
       transactions {
         coinbase
-        feeTransfer {
-          recipient
-          fee
-          type
-        }
       }
     }
     networkState {
@@ -206,11 +192,6 @@ interface ApiBlock {
   };
   transactions: {
     coinbase: string;
-    feeTransfer?: Array<{
-      recipient: string;
-      fee: string;
-      type: string;
-    }>;
   };
 }
 
@@ -289,18 +270,15 @@ function mapApiBlockToSummary(
   block: ApiBlock,
   canonicalMaxBlockHeight: number,
 ): BlockSummary {
-  // Calculate snark fees from fee transfers
-  const snarkFees = (block.transactions.feeTransfer || [])
-    .filter(ft => ft.type === 'Fee_transfer')
-    .reduce((sum, ft) => sum + BigInt(ft.fee || '0'), BigInt(0));
-
+  // Note: snarkFees would require feeTransfer data which is only available
+  // in block detail queries, not list queries. Set to '0' for now.
   return {
     blockHeight: block.blockHeight,
     stateHash: block.stateHash,
     creator: block.creator,
     dateTime: block.dateTime,
     txFees: '0',
-    snarkFees: snarkFees.toString(),
+    snarkFees: '0',
     canonical: block.blockHeight <= canonicalMaxBlockHeight,
     coinbase: block.transactions.coinbase,
     epoch: block.protocolState?.consensusState.epoch,
