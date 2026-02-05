@@ -76,13 +76,31 @@ const BLOCKS_ANALYTICS_QUERY_BASIC = `
   }
 `;
 
+// Minimal query without txFees or userCommands (for archive nodes with limited schema)
+const BLOCKS_ANALYTICS_QUERY_MINIMAL = `
+  query BlocksAnalyticsMinimal($limit: Int, $dateTime_gte: DateTime) {
+    blocks(
+      query: { dateTime_gte: $dateTime_gte }
+      sortBy: BLOCKHEIGHT_DESC
+      limit: $limit
+    ) {
+      blockHeight
+      dateTime
+      transactions {
+        coinbase
+      }
+    }
+  }
+`;
+
 interface BlockAnalyticsData {
   blocks: Array<{
     blockHeight: number;
     dateTime: string;
-    txFees: string;
+    txFees?: string;
     transactions: {
-      userCommands: Array<{ hash: string }>;
+      coinbase?: string;
+      userCommands?: Array<{ hash: string }>;
       zkappCommands?: Array<{ hash: string }>;
     };
   }>;
@@ -107,13 +125,27 @@ export async function fetchBlocksForAnalytics(
     });
   } catch {
     // Fall back to basic query without zkappCommands
-    response = await client.query<BlockAnalyticsData>(
-      BLOCKS_ANALYTICS_QUERY_BASIC,
-      {
-        limit: 2000,
-        dateTime_gte: startDate.toISOString(),
-      },
-    );
+    try {
+      response = await client.query<BlockAnalyticsData>(
+        BLOCKS_ANALYTICS_QUERY_BASIC,
+        {
+          limit: 2000,
+          dateTime_gte: startDate.toISOString(),
+        },
+      );
+    } catch {
+      // Fall back to minimal query (archive nodes without txFees/userCommands)
+      console.log(
+        '[Analytics] Using minimal query - transaction data not available',
+      );
+      response = await client.query<BlockAnalyticsData>(
+        BLOCKS_ANALYTICS_QUERY_MINIMAL,
+        {
+          limit: 2000,
+          dateTime_gte: startDate.toISOString(),
+        },
+      );
+    }
   }
 
   return response.blocks.map((block: BlockAnalyticsData['blocks'][0]) => ({

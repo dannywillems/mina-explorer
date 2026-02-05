@@ -642,9 +642,16 @@ export async function fetchBlockByHash(
     });
   } catch {
     // Fallback to basic query
-    data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
-      limit: 100,
-    });
+    try {
+      data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
+        limit: 100,
+      });
+    } catch {
+      // Fallback to minimal query (mainnet doesn't support userCommands/zkappCommands)
+      data = await client.query<BlocksResponse>(BLOCKS_QUERY_MINIMAL, {
+        limit: 100,
+      });
+    }
   }
 
   const block = data.blocks.find(b => b.stateHash === stateHash);
