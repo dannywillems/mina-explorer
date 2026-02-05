@@ -32,6 +32,7 @@ export function App(): ReactNode {
                 path="transaction/:hash"
                 element={<TransactionDetailPage />}
               />
+              <Route path="tx/:hash" element={<TransactionDetailPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="account/:publicKey" element={<AccountPage />} />
               <Route path="staking" element={<StakingPage />} />

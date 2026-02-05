@@ -15,23 +15,19 @@ export function Header(): ReactNode {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link
-            to="/"
-            className="flex shrink-0 items-center gap-2 font-semibold"
-          >
+          <Link to="/" className="flex shrink-0 items-center">
             <img
               src={`${import.meta.env.BASE_URL}mina-logo-light.svg`}
-              alt="Mina"
+              alt="Mina Explorer"
               height="24"
               className="hidden h-6 dark:block"
             />
             <img
               src={`${import.meta.env.BASE_URL}mina-logo-dark.svg`}
-              alt="Mina"
+              alt="Mina Explorer"
               height="24"
               className="h-6 dark:hidden"
             />
-            <span>Explorer</span>
           </Link>
 
           {/* Desktop Nav */}
