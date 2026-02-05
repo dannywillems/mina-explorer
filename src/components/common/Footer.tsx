@@ -1,19 +1,9 @@
 import type { ReactNode } from 'react';
-import { NETWORKS, DEFAULT_NETWORK } from '@/config';
-
-const NETWORK_KEY = 'mina-explorer-network';
-
-function getSelectedNetwork(): string {
-  const savedNetwork = localStorage.getItem(NETWORK_KEY);
-  return savedNetwork && NETWORKS[savedNetwork]
-    ? savedNetwork
-    : DEFAULT_NETWORK;
-}
+import { useNetwork } from '@/hooks';
 
 export function Footer(): ReactNode {
   const currentYear = new Date().getFullYear();
-  const networkId = getSelectedNetwork();
-  const network = NETWORKS[networkId];
+  const { network } = useNetwork();
   const otherExplorers = network?.otherExplorers;
 
   return (

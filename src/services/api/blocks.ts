@@ -67,6 +67,29 @@ const BLOCKS_QUERY_BASIC = `
   }
 `;
 
+// Minimal query without userCommands/zkappCommands (for mainnet archive)
+const BLOCKS_QUERY_MINIMAL = `
+  query GetBlocksMinimal($limit: Int!) {
+    blocks(
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      creator
+      dateTime
+      transactions {
+        coinbase
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
+      }
+    }
+  }
+`;
+
 // Paginated query with maxBlockHeight filter
 const BLOCKS_QUERY_PAGINATED = `
   query GetBlocksPaginated($limit: Int!, $maxBlockHeight: Int!) {
@@ -87,6 +110,31 @@ const BLOCKS_QUERY_PAGINATED = `
         zkappCommands {
           hash
         }
+      }
+    }
+    networkState {
+      maxBlockHeight {
+        canonicalMaxBlockHeight
+        pendingMaxBlockHeight
+      }
+    }
+  }
+`;
+
+// Minimal paginated query without userCommands/zkappCommands
+const BLOCKS_QUERY_PAGINATED_MINIMAL = `
+  query GetBlocksPaginatedMinimal($limit: Int!, $maxBlockHeight: Int!) {
+    blocks(
+      query: { blockHeight_lt: $maxBlockHeight }
+      limit: $limit
+      sortBy: BLOCKHEIGHT_DESC
+    ) {
+      blockHeight
+      stateHash
+      creator
+      dateTime
+      transactions {
+        coinbase
       }
     }
     networkState {
@@ -439,16 +487,31 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
     const canonicalMax =
       data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
     return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
-  } catch (error) {
-    // If full query fails (e.g., Mesa doesn't support protocolState),
-    // fall back to basic query
+  } catch (fullError) {
+    // If full query fails, try basic query
     console.log('[API] Full blocks query failed, trying basic query...');
-    const data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
-      limit,
-    });
-    const canonicalMax =
-      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
-    return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
+    try {
+      const data = await client.query<BlocksResponse>(BLOCKS_QUERY_BASIC, {
+        limit,
+      });
+      const canonicalMax =
+        data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+      return data.blocks.map(block =>
+        mapApiBlockToSummary(block, canonicalMax),
+      );
+    } catch (basicError) {
+      // If basic query also fails (userCommands/zkappCommands not supported),
+      // fall back to minimal query
+      console.log('[API] Basic blocks query failed, trying minimal query...');
+      const data = await client.query<BlocksResponse>(BLOCKS_QUERY_MINIMAL, {
+        limit,
+      });
+      const canonicalMax =
+        data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+      return data.blocks.map(block =>
+        mapApiBlockToSummary(block, canonicalMax),
+      );
+    }
   }
 }
 
@@ -462,6 +525,21 @@ interface PaginatedBlocksResponse {
   };
 }
 
+async function fetchBlocksWithFallback(
+  client: ReturnType<typeof getClient>,
+  query: string,
+  minimalQuery: string,
+  variables: Record<string, unknown>,
+): Promise<PaginatedBlocksResponse> {
+  try {
+    return await client.query<PaginatedBlocksResponse>(query, variables);
+  } catch (error) {
+    // If query fails (userCommands/zkappCommands not supported), use minimal
+    console.log('[API] Blocks query failed, trying minimal query...');
+    return await client.query<PaginatedBlocksResponse>(minimalQuery, variables);
+  }
+}
+
 export async function fetchBlocksPaginated(
   limit: number = 25,
   beforeHeight?: number,
@@ -470,8 +548,10 @@ export async function fetchBlocksPaginated(
 
   // If no cursor, get the latest blocks
   if (!beforeHeight) {
-    const data = await client.query<PaginatedBlocksResponse>(
+    const data = await fetchBlocksWithFallback(
+      client,
       BLOCKS_QUERY_BASIC,
+      BLOCKS_QUERY_MINIMAL,
       { limit },
     );
     const canonicalMax =
@@ -491,8 +571,10 @@ export async function fetchBlocksPaginated(
   }
 
   // Paginated query
-  const data = await client.query<PaginatedBlocksResponse>(
+  const data = await fetchBlocksWithFallback(
+    client,
     BLOCKS_QUERY_PAGINATED,
+    BLOCKS_QUERY_PAGINATED_MINIMAL,
     { limit, maxBlockHeight: beforeHeight },
   );
   const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
