@@ -14,16 +14,16 @@ export function Header(): ReactNode {
     <header className="border-b border-border bg-card">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
-          {/* Logo */}
+          {/* Logo - dark.svg has white fill for dark mode, light.svg has dark fill for light mode */}
           <Link to="/" className="flex shrink-0 items-center">
             <img
-              src={`${import.meta.env.BASE_URL}mina-logo-light.svg`}
+              src={`${import.meta.env.BASE_URL}mina-logo-dark.svg`}
               alt="Mina Explorer"
               height="24"
               className="hidden h-6 dark:block"
             />
             <img
-              src={`${import.meta.env.BASE_URL}mina-logo-dark.svg`}
+              src={`${import.meta.env.BASE_URL}mina-logo-light.svg`}
               alt="Mina Explorer"
               height="24"
               className="h-6 dark:hidden"
