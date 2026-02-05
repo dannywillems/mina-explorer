@@ -1,3 +1,9 @@
+export interface ExplorerLink {
+  name: string;
+  url: string;
+  description?: string;
+}
+
 export interface NetworkConfig {
   id: string;
   name: string;
@@ -7,6 +13,8 @@ export interface NetworkConfig {
   /** Mina daemon GraphQL endpoint for real-time account data */
   daemonEndpoint: string;
   isTestnet: boolean;
+  /** Links to other explorers for this network */
+  otherExplorers?: ExplorerLink[];
 }
 
 export const NETWORKS: Record<string, NetworkConfig> = {
@@ -18,6 +26,18 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     // Mesa uses devnet daemon for now (no dedicated mesa daemon endpoint)
     daemonEndpoint: 'https://devnet-plain-1.gcp.o1test.net/graphql',
     isTestnet: true,
+    otherExplorers: [
+      {
+        name: 'Mesa Explorer (Basic)',
+        url: 'https://mesa-explorer.vercel.app/',
+        description: 'Last 290 blocks only',
+      },
+      {
+        name: 'MinaExplorer Mesa',
+        url: 'https://mesa.minaexplorer.com/',
+        description: "Gareth's explorer",
+      },
+    ],
   },
   devnet: {
     id: 'devnet',

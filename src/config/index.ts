@@ -8,4 +8,4 @@ export const config = {
 };
 
 export { NETWORKS, DEFAULT_NETWORK } from './networks';
-export type { NetworkConfig } from './networks';
+export type { NetworkConfig, ExplorerLink } from './networks';

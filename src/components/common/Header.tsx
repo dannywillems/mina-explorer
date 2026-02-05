@@ -13,9 +13,12 @@ export function Header(): ReactNode {
   return (
     <header className="border-b border-border bg-card">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-semibold">
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-2 font-semibold"
+          >
             <img
               src={`${import.meta.env.BASE_URL}mina-logo-light.svg`}
               alt="Mina"
@@ -32,7 +35,7 @@ export function Header(): ReactNode {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-4 lg:flex">
             <Link
               to="/blocks"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -72,7 +75,7 @@ export function Header(): ReactNode {
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
             <PriceDisplay />
             <SearchBar />
             <ThemeToggle />
@@ -81,7 +84,7 @@ export function Header(): ReactNode {
 
           {/* Mobile Menu Button */}
           <button
-            className="rounded-md p-2 text-muted-foreground hover:bg-accent md:hidden"
+            className="rounded-md p-2 text-muted-foreground hover:bg-accent lg:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -91,7 +94,7 @@ export function Header(): ReactNode {
         {/* Mobile Menu */}
         <div
           className={cn(
-            'overflow-hidden transition-all duration-200 md:hidden',
+            'overflow-hidden transition-all duration-200 lg:hidden',
             mobileMenuOpen ? 'max-h-96 pb-4' : 'max-h-0',
           )}
         >

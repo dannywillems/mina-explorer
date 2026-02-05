@@ -1,12 +1,25 @@
 import type { ReactNode } from 'react';
+import { NETWORKS, DEFAULT_NETWORK } from '@/config';
+
+const NETWORK_KEY = 'mina-explorer-network';
+
+function getSelectedNetwork(): string {
+  const savedNetwork = localStorage.getItem(NETWORK_KEY);
+  return savedNetwork && NETWORKS[savedNetwork]
+    ? savedNetwork
+    : DEFAULT_NETWORK;
+}
 
 export function Footer(): ReactNode {
   const currentYear = new Date().getFullYear();
+  const networkId = getSelectedNetwork();
+  const network = NETWORKS[networkId];
+  const otherExplorers = network?.otherExplorers;
 
   return (
     <footer className="border-t border-border bg-card py-8">
       <div className="container mx-auto px-4">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <h5 className="mb-3 font-semibold">Mina Explorer</h5>
             <p className="mb-2 text-sm text-muted-foreground">
@@ -99,6 +112,37 @@ export function Footer(): ReactNode {
                 </a>
               </li>
             </ul>
+          </div>
+
+          <div>
+            <h6 className="mb-3 text-sm font-medium text-muted-foreground">
+              Other {network?.displayName} Explorers
+            </h6>
+            {otherExplorers && otherExplorers.length > 0 ? (
+              <ul className="space-y-2 text-sm">
+                {otherExplorers.map(explorer => (
+                  <li key={explorer.url}>
+                    <a
+                      href={explorer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {explorer.name}
+                    </a>
+                    {explorer.description && (
+                      <span className="ml-1 text-xs text-muted-foreground/60">
+                        ({explorer.description})
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground/60">
+                No other explorers available
+              </p>
+            )}
           </div>
         </div>
 

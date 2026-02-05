@@ -63,6 +63,7 @@ export function RecentBlocks(): ReactNode {
               <thead>
                 <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Height</th>
+                  <th className="px-4 py-3">Hash</th>
                   <th className="px-4 py-3">Producer</th>
                   <th className="px-4 py-3 text-right">Txs</th>
                   <th className="px-4 py-3 text-right">Coinbase</th>
@@ -82,6 +83,13 @@ export function RecentBlocks(): ReactNode {
                       >
                         {formatNumber(block.blockHeight)}
                       </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <HashLink
+                        hash={block.stateHash}
+                        type="block"
+                        prefixLength={6}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <HashLink

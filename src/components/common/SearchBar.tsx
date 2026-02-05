@@ -36,7 +36,7 @@ export function SearchBar({
         <input
           type="text"
           className={cn(
-            'h-9 w-full min-w-[200px] rounded-l-md border border-r-0 border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring',
+            'h-9 w-full min-w-[200px] rounded-l-md border border-r-0 border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring',
             error && 'border-destructive focus:ring-destructive',
           )}
           placeholder={placeholder}
