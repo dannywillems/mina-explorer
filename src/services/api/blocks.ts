@@ -1,7 +1,7 @@
 import { getClient } from './client';
 import type { BlockSummary, BlockDetail, NetworkState } from '@/types';
 
-// Full query with protocolState and networkState (for nodes that support it)
+// Full query with protocolState, networkState, and transaction counts
 // Note: feeTransfer is not available in block list queries, only in block detail
 const BLOCKS_QUERY_FULL = `
   query GetBlocksFull($limit: Int!) {
@@ -22,6 +22,12 @@ const BLOCKS_QUERY_FULL = `
       }
       transactions {
         coinbase
+        userCommands {
+          hash
+        }
+        zkappCommands {
+          hash
+        }
       }
     }
     networkState {
@@ -45,6 +51,12 @@ const BLOCKS_QUERY_BASIC = `
       dateTime
       transactions {
         coinbase
+        userCommands {
+          hash
+        }
+        zkappCommands {
+          hash
+        }
       }
     }
     networkState {
@@ -69,6 +81,12 @@ const BLOCKS_QUERY_PAGINATED = `
       dateTime
       transactions {
         coinbase
+        userCommands {
+          hash
+        }
+        zkappCommands {
+          hash
+        }
       }
     }
     networkState {
@@ -192,6 +210,8 @@ interface ApiBlock {
   };
   transactions: {
     coinbase: string;
+    userCommands?: Array<{ hash: string }>;
+    zkappCommands?: Array<{ hash: string }>;
   };
 }
 
@@ -270,6 +290,11 @@ function mapApiBlockToSummary(
   block: ApiBlock,
   canonicalMaxBlockHeight: number,
 ): BlockSummary {
+  // Calculate transaction count (user commands + zkApp commands)
+  const userCommandCount = block.transactions.userCommands?.length || 0;
+  const zkappCommandCount = block.transactions.zkappCommands?.length || 0;
+  const transactionCount = userCommandCount + zkappCommandCount;
+
   // Note: snarkFees would require feeTransfer data which is only available
   // in block detail queries, not list queries. Set to '0' for now.
   return {
@@ -280,6 +305,7 @@ function mapApiBlockToSummary(
     txFees: '0',
     snarkFees: '0',
     canonical: block.blockHeight <= canonicalMaxBlockHeight,
+    transactionCount,
     coinbase: block.transactions.coinbase,
     epoch: block.protocolState?.consensusState.epoch,
     slot: block.protocolState?.consensusState.slot,

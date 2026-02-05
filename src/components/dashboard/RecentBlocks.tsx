@@ -1,13 +1,29 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBlocks } from '@/hooks';
 import { HashLink, TimeAgo, Amount, LoadingSpinner } from '@/components/common';
 import { formatNumber } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
+// Query displayed for transparency
+const BLOCKS_QUERY_INFO = `query GetBlocksBasic($limit: Int!) {
+  blocks(limit: $limit, sortBy: BLOCKHEIGHT_DESC) {
+    blockHeight
+    stateHash
+    creator
+    dateTime
+    transactions {
+      coinbase
+      userCommands { hash }
+      zkappCommands { hash }
+    }
+  }
+}`;
+
 export function RecentBlocks(): ReactNode {
   const { blocks, loading, error, refresh } = useBlocks(10);
+  const [showQuery, setShowQuery] = useState(false);
 
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -48,6 +64,7 @@ export function RecentBlocks(): ReactNode {
                 <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Height</th>
                   <th className="px-4 py-3">Producer</th>
+                  <th className="px-4 py-3 text-right">Txs</th>
                   <th className="px-4 py-3 text-right">Coinbase</th>
                   <th className="px-4 py-3">Time</th>
                 </tr>
@@ -74,6 +91,11 @@ export function RecentBlocks(): ReactNode {
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <span className="font-mono">
+                        {block.transactionCount ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
                       <Amount value={block.coinbase || '0'} />
                     </td>
                     <td className="px-4 py-3">
@@ -83,6 +105,24 @@ export function RecentBlocks(): ReactNode {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* Query Info Section */}
+      <div className="border-t border-border">
+        <button
+          className="flex w-full items-center justify-between px-4 py-2 text-left text-xs text-muted-foreground hover:bg-accent/50"
+          onClick={() => setShowQuery(!showQuery)}
+        >
+          <span>GraphQL Query</span>
+          {showQuery ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        {showQuery && (
+          <div className="border-t border-border bg-muted/50 p-4">
+            <pre className="overflow-x-auto whitespace-pre text-xs text-muted-foreground">
+              {BLOCKS_QUERY_INFO}
+            </pre>
           </div>
         )}
       </div>

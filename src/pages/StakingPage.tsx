@@ -1,6 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, TrendingUp, Calendar, Clock } from 'lucide-react';
+import {
+  Award,
+  TrendingUp,
+  Calendar,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import {
   useBlockProducersByPeriod,
   useNetworkState,
@@ -11,8 +18,22 @@ import { HashLink, LoadingSpinner } from '@/components/common';
 import { formatNumber } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
+// Query displayed for transparency
+const STAKING_QUERY_INFO = `query GetBlocksByDateRange($startDate: DateTime!, $endDate: DateTime!, $limit: Int!) {
+  blocks(
+    query: { dateTime_gte: $startDate, dateTime_lt: $endDate }
+    limit: $limit
+    sortBy: BLOCKHEIGHT_DESC
+  ) {
+    creator
+    blockHeight
+    dateTime
+  }
+}`;
+
 export function StakingPage(): ReactNode {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('7d');
+  const [showQuery, setShowQuery] = useState(false);
   const { result, loading, error } = useBlockProducersByPeriod(
     selectedPeriod,
     25,
@@ -228,6 +249,24 @@ export function StakingPage(): ReactNode {
               </Link>{' '}
               to see who they delegate to.
             </p>
+          </div>
+
+          {/* Query Info Section */}
+          <div className="rounded-lg border border-border bg-card">
+            <button
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-muted-foreground hover:bg-accent/50"
+              onClick={() => setShowQuery(!showQuery)}
+            >
+              <span>GraphQL Query</span>
+              {showQuery ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {showQuery && (
+              <div className="border-t border-border bg-muted/50 p-4">
+                <pre className="overflow-x-auto whitespace-pre text-xs text-muted-foreground">
+                  {STAKING_QUERY_INFO}
+                </pre>
+              </div>
+            )}
           </div>
         </>
       )}

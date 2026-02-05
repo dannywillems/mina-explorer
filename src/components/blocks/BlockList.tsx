@@ -45,6 +45,7 @@ export function BlockList({
             <th className="px-4 py-3">Height</th>
             <th className="px-4 py-3">State Hash</th>
             <th className="px-4 py-3">Block Producer</th>
+            <th className="px-4 py-3 text-right">Txs</th>
             <th className="px-4 py-3">Time</th>
             <th className="px-4 py-3 text-right">Coinbase</th>
           </tr>
@@ -82,6 +83,9 @@ export function BlockList({
               </td>
               <td className="px-4 py-3">
                 <HashLink hash={block.creator} type="account" />
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="font-mono">{block.transactionCount ?? 0}</span>
               </td>
               <td className="px-4 py-3">
                 <TimeAgo dateTime={block.dateTime} />
