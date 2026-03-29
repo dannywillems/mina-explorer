@@ -196,6 +196,20 @@ async function handleArchiveRequest(route: Route): Promise<void> {
       return;
     }
 
+    // Handle paginated transaction queries (confirmed transactions from archive)
+    if (
+      query.includes('GetTransactionsFull') ||
+      query.includes('GetTransactionsBasic') ||
+      query.includes('GetTransactionsPaginated')
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(FIXTURE_DATA.confirmedTransactions),
+      });
+      return;
+    }
+
     // Handle block detail queries (with userCommands or zkappCommands)
     // Note: feeTransfer alone is not sufficient as block list queries also include it
     if (
