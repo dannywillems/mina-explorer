@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   RefreshCw,
+  Info,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -9,7 +10,7 @@ import {
 import { HashLink, Amount, LoadingSpinner } from '@/components/common';
 import { TransactionList } from '@/components/transactions';
 import {
-  usePaginatedTransactions,
+  useRecentTransactions,
   usePendingTransactions,
   usePendingZkAppCommands,
   useNetwork,
@@ -19,23 +20,27 @@ import { formatNumber } from '@/utils/formatters';
 import { generatePageNumbers } from '@/utils/pagination';
 
 type Tab = 'confirmed' | 'mempool';
+type MempoolTab = 'user' | 'zkapp';
 
 export function TransactionsPage(): ReactNode {
   const [activeTab, setActiveTab] = useState<Tab>('confirmed');
+  const [mempoolTab, setMempoolTab] = useState<MempoolTab>('user');
+  const [showQuery, setShowQuery] = useState(false);
   const { network } = useNetwork();
 
   const {
     transactions: confirmedTxs,
+    allTransactions,
     loading: confirmedLoading,
     error: confirmedError,
+    blocksScanned,
     page,
     totalPages,
-    totalBlockHeight,
     goToPage,
     nextPage,
     prevPage,
     refresh: refreshConfirmed,
-  } = usePaginatedTransactions(50);
+  } = useRecentTransactions(30);
 
   const {
     transactions: pendingTxs,
@@ -59,10 +64,10 @@ export function TransactionsPage(): ReactNode {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Transactions</h1>
-          {activeTab === 'confirmed' && totalBlockHeight > 0 && (
+          {activeTab === 'confirmed' && blocksScanned > 0 && (
             <p className="text-sm text-muted-foreground">
-              From {formatNumber(totalBlockHeight)} blocks on{' '}
-              {network.displayName}
+              {formatNumber(allTransactions.length)} transactions from last{' '}
+              {blocksScanned} blocks on {network.displayName}
             </p>
           )}
           {activeTab === 'mempool' && (
@@ -222,16 +227,92 @@ export function TransactionsPage(): ReactNode {
 
       {/* Mempool tab */}
       {activeTab === 'mempool' && (
-        <div className="space-y-6">
-          {/* Pending user commands */}
-          <div className="rounded-lg border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-medium">
-                Pending User Commands ({pendingTxs.length})
-              </h2>
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <div className="flex gap-4">
+              <button
+                onClick={() => setMempoolTab('user')}
+                className={cn(
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  mempoolTab === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                User Transactions ({pendingTxs.length})
+              </button>
+              <button
+                onClick={() => setMempoolTab('zkapp')}
+                className={cn(
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  mempoolTab === 'zkapp'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                zkApp Commands ({pendingZkApps.length})
+              </button>
             </div>
-            <div className="p-6">
-              {pendingLoading ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowQuery(!showQuery)}
+                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Show GraphQL query"
+              >
+                <Info size={16} />
+              </button>
+              <button
+                onClick={() =>
+                  mempoolTab === 'user' ? refetchPending() : refetchZk()
+                }
+                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw size={16} />
+              </button>
+            </div>
+          </div>
+
+          {showQuery && (
+            <div className="border-b border-border bg-accent/30 px-6 py-4">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                GraphQL Query (Daemon Endpoint: {network.displayName})
+              </p>
+              <pre className="overflow-x-auto rounded bg-accent p-3 font-mono text-xs">
+                {mempoolTab === 'user'
+                  ? `query {
+  pooledUserCommands {
+    hash
+    kind
+    amount
+    fee
+    from
+    to
+    memo
+    nonce
+  }
+}`
+                  : `query {
+  pooledZkappCommands {
+    hash
+    zkappCommand {
+      memo
+      feePayer {
+        body {
+          publicKey
+          fee
+        }
+      }
+    }
+  }
+}`}
+              </pre>
+            </div>
+          )}
+
+          <div className="p-6">
+            {mempoolTab === 'user' ? (
+              pendingLoading ? (
                 <LoadingSpinner text="Loading pending transactions..." />
               ) : pendingError ? (
                 <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
@@ -289,60 +370,48 @@ export function TransactionsPage(): ReactNode {
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pending zkApp commands */}
-          <div className="rounded-lg border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-medium">
-                Pending zkApp Commands ({pendingZkApps.length})
-              </h2>
-            </div>
-            <div className="p-6">
-              {zkLoading ? (
-                <LoadingSpinner text="Loading pending zkApp commands..." />
-              ) : zkError ? (
-                <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-                  {zkError}
-                </div>
-              ) : pendingZkApps.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No pending zkApp commands in the mempool.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        <th className="px-4 py-3">Hash</th>
-                        <th className="px-4 py-3">Fee Payer</th>
-                        <th className="px-4 py-3 text-right">Fee</th>
+              )
+            ) : zkLoading ? (
+              <LoadingSpinner text="Loading pending zkApp commands..." />
+            ) : zkError ? (
+              <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
+                {zkError}
+              </div>
+            ) : pendingZkApps.length === 0 ? (
+              <p className="text-muted-foreground">
+                No pending zkApp commands in the mempool.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-3">Hash</th>
+                      <th className="px-4 py-3">Fee Payer</th>
+                      <th className="px-4 py-3 text-right">Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {pendingZkApps.map(cmd => (
+                      <tr
+                        key={cmd.hash}
+                        className="transition-colors hover:bg-accent/50"
+                      >
+                        <td className="px-4 py-3">
+                          <HashLink hash={cmd.hash} type="transaction" />
+                        </td>
+                        <td className="px-4 py-3">
+                          <HashLink hash={cmd.feePayer} type="account" />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Amount value={cmd.fee} />
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {pendingZkApps.map(cmd => (
-                        <tr
-                          key={cmd.hash}
-                          className="transition-colors hover:bg-accent/50"
-                        >
-                          <td className="px-4 py-3">
-                            <HashLink hash={cmd.hash} type="transaction" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <HashLink hash={cmd.feePayer} type="account" />
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Amount value={cmd.fee} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

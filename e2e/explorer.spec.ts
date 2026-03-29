@@ -1130,11 +1130,15 @@ test.describe('Transactions Page', () => {
     // Click mempool tab
     await page.locator('button').filter({ hasText: 'Mempool' }).click();
 
-    // Should show mempool content
-    await expect(page.locator('text=/Pending User Commands/i')).toBeVisible({
+    // Should show mempool sub-tabs
+    await expect(
+      page.locator('button').filter({ hasText: /User Transactions/ }),
+    ).toBeVisible({
       timeout: 15000,
     });
-    await expect(page.locator('text=/Pending zkApp Commands/i')).toBeVisible();
+    await expect(
+      page.locator('button').filter({ hasText: /zkApp Commands/ }),
+    ).toBeVisible();
   });
 
   test('can switch between tabs', async ({ page }) => {
@@ -1145,7 +1149,9 @@ test.describe('Transactions Page', () => {
 
     // Switch to mempool
     await page.locator('button').filter({ hasText: 'Mempool' }).click();
-    await expect(page.locator('text=/Pending User Commands/i')).toBeVisible({
+    await expect(
+      page.locator('button').filter({ hasText: /User Transactions/ }),
+    ).toBeVisible({
       timeout: 15000,
     });
 

@@ -1,15 +1,5 @@
-import { NETWORKS, DEFAULT_NETWORK } from '@/config';
 import { getClient } from './client';
-import type { NetworkState } from '@/types';
-
-const NETWORK_KEY = 'mina-explorer-network';
-
-function getDaemonEndpoint(): string {
-  const savedNetwork = localStorage.getItem(NETWORK_KEY);
-  const networkId =
-    savedNetwork && NETWORKS[savedNetwork] ? savedNetwork : DEFAULT_NETWORK;
-  return NETWORKS[networkId].daemonEndpoint;
-}
+import { queryDaemon, isCorsError, MAX_DAEMON_BLOCKS } from './daemon';
 
 export interface PendingTransaction {
   hash: string;
@@ -57,11 +47,6 @@ interface DaemonZkAppCommandResponse {
   }>;
 }
 
-interface GraphQLResponse<T> {
-  data?: T;
-  errors?: Array<{ message: string }>;
-}
-
 const POOLED_USER_COMMANDS_QUERY = `
   query GetPooledUserCommands {
     pooledUserCommands {
@@ -93,43 +78,6 @@ const POOLED_ZKAPP_COMMANDS_QUERY = `
     }
   }
 `;
-
-async function queryDaemon<T>(query: string): Promise<T> {
-  const endpoint = getDaemonEndpoint();
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
-  }
-
-  const result = (await response.json()) as GraphQLResponse<T>;
-
-  if (result.errors && result.errors.length > 0) {
-    const errorMessages = result.errors.map(e => e.message).join(', ');
-    throw new Error(`GraphQL error: ${errorMessages}`);
-  }
-
-  if (!result.data) {
-    throw new Error('No data in response');
-  }
-
-  return result.data;
-}
-
-function isCorsError(error: unknown): boolean {
-  return (
-    error instanceof TypeError &&
-    (error.message.includes('Failed to fetch') ||
-      error.message.includes('NetworkError') ||
-      error.message.includes('CORS'))
-  );
-}
 
 export async function fetchPendingTransactions(): Promise<
   PendingTransaction[]
@@ -581,228 +529,74 @@ export interface ConfirmedTransaction {
   failureReason?: string | null | undefined;
 }
 
-export interface TransactionsPageResult {
+export interface RecentTransactionsResult {
   transactions: ConfirmedTransaction[];
-  hasMore: boolean;
-  nextCursor: number | null;
-  totalBlockHeight: number;
+  blocksScanned: number;
+  oldestBlockHeight: number;
+  newestBlockHeight: number;
 }
 
-// Full query: blocks with full userCommands + zkappCommands
-const TRANSACTIONS_QUERY_FULL = `
-  query GetTransactionsFull($limit: Int!) {
-    blocks(
-      limit: $limit
-      sortBy: BLOCKHEIGHT_DESC
-    ) {
-      blockHeight
-      dateTime
-      transactions {
-        userCommands {
-          hash
-          kind
-          from
-          to
-          amount
-          fee
-          memo
-          nonce
-          failureReason
-        }
-        zkappCommands {
-          hash
-          failureReasons {
-            failures
-          }
-          zkappCommand {
-            memo
-            feePayer {
-              body {
-                publicKey
-                fee
-              }
-            }
-            accountUpdates {
-              body {
-                publicKey
-              }
-            }
-          }
-        }
-      }
-    }
-    networkState {
-      maxBlockHeight {
-        canonicalMaxBlockHeight
-        pendingMaxBlockHeight
-      }
-    }
-  }
-`;
-
-// Basic fallback without zkappCommands
-const TRANSACTIONS_QUERY_BASIC = `
-  query GetTransactionsBasic($limit: Int!) {
-    blocks(
-      limit: $limit
-      sortBy: BLOCKHEIGHT_DESC
-    ) {
-      blockHeight
-      dateTime
-      transactions {
-        userCommands {
-          hash
-          kind
-          from
-          to
-          amount
-          fee
-          memo
-          nonce
-          failureReason
-        }
-      }
-    }
-    networkState {
-      maxBlockHeight {
-        canonicalMaxBlockHeight
-        pendingMaxBlockHeight
-      }
-    }
-  }
-`;
-
-// Paginated full query with blockHeight_lt cursor
-const TRANSACTIONS_QUERY_PAGINATED_FULL = `
-  query GetTransactionsPaginatedFull($limit: Int!, $maxBlockHeight: Int!) {
-    blocks(
-      query: { blockHeight_lt: $maxBlockHeight }
-      limit: $limit
-      sortBy: BLOCKHEIGHT_DESC
-    ) {
-      blockHeight
-      dateTime
-      transactions {
-        userCommands {
-          hash
-          kind
-          from
-          to
-          amount
-          fee
-          memo
-          nonce
-          failureReason
-        }
-        zkappCommands {
-          hash
-          failureReasons {
-            failures
-          }
-          zkappCommand {
-            memo
-            feePayer {
-              body {
-                publicKey
-                fee
-              }
-            }
-            accountUpdates {
-              body {
-                publicKey
-              }
-            }
-          }
-        }
-      }
-    }
-    networkState {
-      maxBlockHeight {
-        canonicalMaxBlockHeight
-        pendingMaxBlockHeight
-      }
-    }
-  }
-`;
-
-// Paginated basic fallback
-const TRANSACTIONS_QUERY_PAGINATED_BASIC = `
-  query GetTransactionsPaginatedBasic($limit: Int!, $maxBlockHeight: Int!) {
-    blocks(
-      query: { blockHeight_lt: $maxBlockHeight }
-      limit: $limit
-      sortBy: BLOCKHEIGHT_DESC
-    ) {
-      blockHeight
-      dateTime
-      transactions {
-        userCommands {
-          hash
-          kind
-          from
-          to
-          amount
-          fee
-          memo
-          nonce
-          failureReason
-        }
-      }
-    }
-    networkState {
-      maxBlockHeight {
-        canonicalMaxBlockHeight
-        pendingMaxBlockHeight
-      }
-    }
-  }
-`;
-
-interface TransactionBlockResponse {
-  blocks: Array<{
-    blockHeight: number;
-    dateTime: string;
-    transactions: {
-      userCommands?: Array<{
-        hash: string;
-        kind: string;
-        from: string;
-        to: string;
-        amount: string;
-        fee: string;
-        memo: string;
-        nonce: number;
-        failureReason: string | null;
-      }>;
-      zkappCommands?: Array<{
-        hash: string;
-        failureReasons: Array<{ failures: string[] }> | null;
-        zkappCommand: {
-          memo: string;
-          feePayer: {
-            body: {
-              publicKey: string;
-              fee: string;
-            };
-          };
-          accountUpdates: Array<{
-            body: {
-              publicKey: string;
-            };
-          }>;
-        };
-      }>;
+interface DaemonBestChainBlock {
+  stateHash: string;
+  protocolState: {
+    consensusState: {
+      blockHeight: string;
     };
-  }>;
-  networkState: NetworkState;
+    blockchainState: {
+      date: string;
+    };
+  };
+  transactions: {
+    userCommands: Array<{
+      hash: string;
+      kind: string;
+      from: string;
+      to: string;
+      amount: string;
+      fee: string;
+      memo: string;
+      nonce: number;
+      failureReason: string | null;
+    }>;
+    zkappCommands: Array<{
+      hash: string;
+      failureReasons: Array<{ failures: string[] }> | null;
+      zkappCommand: {
+        memo: string;
+        feePayer: {
+          body: {
+            publicKey: string;
+            fee: string;
+          };
+        };
+        accountUpdates: Array<{
+          body: {
+            publicKey: string;
+          };
+        }>;
+      };
+    }>;
+  };
 }
 
-function flattenBlockTransactions(
-  blocks: TransactionBlockResponse['blocks'],
+interface DaemonBestChainResponse {
+  bestChain: DaemonBestChainBlock[];
+}
+
+function flattenDaemonBlocks(
+  blocks: DaemonBestChainBlock[],
 ): ConfirmedTransaction[] {
   const txs: ConfirmedTransaction[] = [];
 
   for (const block of blocks) {
+    const blockHeight = parseInt(
+      block.protocolState.consensusState.blockHeight,
+      10,
+    );
+    const dateTime = new Date(
+      parseInt(block.protocolState.blockchainState.date, 10),
+    ).toISOString();
+
     for (const cmd of block.transactions.userCommands || []) {
       txs.push({
         hash: cmd.hash,
@@ -814,8 +608,8 @@ function flattenBlockTransactions(
         fee: cmd.fee,
         memo: cmd.memo,
         nonce: cmd.nonce,
-        blockHeight: block.blockHeight,
-        dateTime: block.dateTime,
+        blockHeight,
+        dateTime,
         failureReason: cmd.failureReason,
       });
     }
@@ -827,8 +621,8 @@ function flattenBlockTransactions(
         from: cmd.zkappCommand.feePayer.body.publicKey,
         fee: cmd.zkappCommand.feePayer.body.fee,
         memo: cmd.zkappCommand.memo,
-        blockHeight: block.blockHeight,
-        dateTime: block.dateTime,
+        blockHeight,
+        dateTime,
         failureReason:
           cmd.failureReasons?.flatMap(fr => fr.failures).join(', ') ||
           undefined,
@@ -839,68 +633,92 @@ function flattenBlockTransactions(
   return txs;
 }
 
-async function fetchTransactionsWithFallback(
-  client: ReturnType<typeof getClient>,
-  fullQuery: string,
-  basicQuery: string,
-  variables: Record<string, unknown>,
-): Promise<TransactionBlockResponse> {
+export async function fetchRecentTransactions(
+  maxBlocks: number = MAX_DAEMON_BLOCKS,
+): Promise<RecentTransactionsResult> {
+  const limit = Math.min(maxBlocks, MAX_DAEMON_BLOCKS);
+
+  const query = `{
+    bestChain(maxLength: ${limit}) {
+      stateHash
+      protocolState {
+        consensusState {
+          blockHeight
+        }
+        blockchainState {
+          date
+        }
+      }
+      transactions {
+        userCommands {
+          hash
+          kind
+          from
+          to
+          amount
+          fee
+          memo
+          nonce
+          failureReason
+        }
+        zkappCommands {
+          hash
+          failureReasons {
+            failures
+          }
+          zkappCommand {
+            memo
+            feePayer {
+              body {
+                publicKey
+                fee
+              }
+            }
+            accountUpdates {
+              body {
+                publicKey
+              }
+            }
+          }
+        }
+      }
+    }
+  }`;
+
   try {
-    return await client.query<TransactionBlockResponse>(fullQuery, variables);
+    const data = await queryDaemon<DaemonBestChainResponse>(query);
+    const blocks = data.bestChain || [];
+
+    if (blocks.length === 0) {
+      return {
+        transactions: [],
+        blocksScanned: 0,
+        oldestBlockHeight: 0,
+        newestBlockHeight: 0,
+      };
+    }
+
+    // bestChain returns oldest-first; reverse for newest-first
+    const sorted = [...blocks].reverse();
+    const transactions = flattenDaemonBlocks(sorted);
+
+    const heights = sorted.map(b =>
+      parseInt(b.protocolState.consensusState.blockHeight, 10),
+    );
+
+    return {
+      transactions,
+      blocksScanned: sorted.length,
+      oldestBlockHeight: Math.min(...heights),
+      newestBlockHeight: Math.max(...heights),
+    };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : '';
-    if (msg.includes('zkappCommands') || msg.includes('Cannot query field')) {
-      console.log(
-        '[API] zkappCommands not supported, using basic transaction query...',
-      );
-      return await client.query<TransactionBlockResponse>(
-        basicQuery,
-        variables,
+    if (isCorsError(error)) {
+      throw new Error(
+        'Unable to reach the daemon endpoint. ' +
+          'Cross-origin requests are not allowed from this domain.',
       );
     }
     throw error;
   }
-}
-
-export async function fetchTransactionsPaginated(
-  blocksPerPage: number = 50,
-  beforeHeight?: number,
-): Promise<TransactionsPageResult> {
-  const client = getClient();
-
-  if (!beforeHeight) {
-    const data = await fetchTransactionsWithFallback(
-      client,
-      TRANSACTIONS_QUERY_FULL,
-      TRANSACTIONS_QUERY_BASIC,
-      { limit: blocksPerPage },
-    );
-    const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
-    const transactions = flattenBlockTransactions(data.blocks);
-    const lastBlock = data.blocks[data.blocks.length - 1];
-
-    return {
-      transactions,
-      hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
-      nextCursor: lastBlock ? lastBlock.blockHeight : null,
-      totalBlockHeight: totalHeight,
-    };
-  }
-
-  const data = await fetchTransactionsWithFallback(
-    client,
-    TRANSACTIONS_QUERY_PAGINATED_FULL,
-    TRANSACTIONS_QUERY_PAGINATED_BASIC,
-    { limit: blocksPerPage, maxBlockHeight: beforeHeight },
-  );
-  const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
-  const transactions = flattenBlockTransactions(data.blocks);
-  const lastBlock = data.blocks[data.blocks.length - 1];
-
-  return {
-    transactions,
-    hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
-    nextCursor: lastBlock ? lastBlock.blockHeight : null,
-    totalBlockHeight: totalHeight,
-  };
 }

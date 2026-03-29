@@ -18,7 +18,7 @@ export {
   usePendingZkAppCommands,
   useTransaction,
   useAccountTransactions,
-  usePaginatedTransactions,
+  useRecentTransactions,
 } from './useTransactions';
 export { usePrice } from './usePrice';
 export { useHistoricalPrice } from './useHistoricalPrice';
