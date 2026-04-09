@@ -50,6 +50,12 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     archiveEndpoint: 'https://devnet-archive-node-api.gcp.o1test.net',
     daemonEndpoint: 'https://devnet-plain-1.gcp.o1test.net/graphql',
     isTestnet: true,
+    otherExplorers: [
+      {
+        name: 'Minascan',
+        url: 'https://minascan.io/devnet/home',
+      },
+    ],
   },
   mainnet: {
     id: 'mainnet',
@@ -58,6 +64,12 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     archiveEndpoint: 'https://archive-node-api.gcp.o1test.net',
     daemonEndpoint: 'https://mainnet-plain-1.gcp.o1test.net/graphql',
     isTestnet: false,
+    otherExplorers: [
+      {
+        name: 'Minascan',
+        url: 'https://minascan.io/mainnet/home',
+      },
+    ],
   },
 };
 
