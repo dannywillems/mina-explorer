@@ -48,7 +48,26 @@ jobs:
             exit 0
           fi
 
+          # GHCR refuses to delete a version via the per-version DELETE
+          # endpoint if it would leave the package with zero tagged versions
+          # (HTTP 400: "You cannot delete the last tagged version of a
+          # package. You must delete the package instead."). This bites the
+          # very first PR cleanup when no release tags exist yet. We detect
+          # that specific error and skip cleanly — the orphaned pr-<n> tag
+          # becomes deletable as soon as any other tagged version exists.
           for ID in $VERSION_IDS; do
             echo "Deleting version ${ID} (was tagged ${TAG})"
-            gh api -X DELETE "/orgs/${OWNER}/packages/container/${PACKAGE}/versions/${ID}"
+            if OUTPUT=$(gh api -X DELETE \
+              "/orgs/${OWNER}/packages/container/${PACKAGE}/versions/${ID}" 2>&1); then
+              echo "  deleted"
+            else
+              if printf '%s' "$OUTPUT" | grep -q "last tagged version"; then
+                echo "  warning: ${TAG} is the only tagged version of ${PACKAGE} — skipping deletion."
+                echo "  The orphaned tag will become deletable once another release or PR pushes a new tag."
+                continue
+              fi
+              echo "  error: failed to delete version ${ID}" >&2
+              printf '%s\n' "$OUTPUT" >&2
+              exit 1
+            fi
           done
