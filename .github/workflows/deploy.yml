@@ -342,9 +342,10 @@ jobs:
         continue-on-error: true
         env:
           # SLACK_BOT_TOKEN is exported by the previous step via $GITHUB_ENV.
-          # Channel + subteam mention match Grafana's slack-platform-eng contact point
+          # Subteam mention matches Grafana's slack-platform-eng contact point
           # (see gitops-infrastructure/.../grafana/templates/extra-deploys.yaml.gotmpl L60-L62)
-          SLACK_CHANNEL: '#platform-eng-team'
+          # Channel ID C07SSEMHLLD — name kept for readability
+          SLACK_CHANNEL: '#releases'
           SLACK_MENTION: '<!subteam^S04EBNWL4HG>'
           TAG: ${{ steps.tag.outputs.tag }}
           REPO: ${{ github.repository }}
