@@ -8,4 +8,5 @@ export { AccountPage } from './AccountPage';
 export { StakingPage } from './StakingPage';
 export { ZkAppsPage } from './ZkAppsPage';
 export { AnalyticsPage } from './AnalyticsPage';
+export { BroadcastPage } from './BroadcastPage';
 export { NotFoundPage } from './NotFoundPage';

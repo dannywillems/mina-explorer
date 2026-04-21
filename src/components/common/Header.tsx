@@ -68,6 +68,12 @@ export function Header(): ReactNode {
             >
               Analytics
             </Link>
+            <Link
+              to="/broadcast"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Broadcast
+            </Link>
           </nav>
 
           {/* Desktop Actions */}
@@ -137,6 +143,13 @@ export function Header(): ReactNode {
               onClick={() => setMobileMenuOpen(false)}
             >
               Analytics
+            </Link>
+            <Link
+              to="/broadcast"
+              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Broadcast
             </Link>
           </nav>
           <div className="mt-4 flex flex-col gap-3">

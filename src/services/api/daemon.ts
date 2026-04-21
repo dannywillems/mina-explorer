@@ -35,6 +35,35 @@ export async function queryDaemon<T>(query: string): Promise<T> {
   return result.data;
 }
 
+export async function mutateDaemon<T>(
+  mutation: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const endpoint = getDaemonEndpoint();
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: mutation, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+  }
+
+  const result = (await response.json()) as GraphQLResponse<T>;
+
+  if (result.errors && result.errors.length > 0) {
+    const errorMessages = result.errors.map(e => e.message).join(', ');
+    throw new Error(`GraphQL error: ${errorMessages}`);
+  }
+
+  if (!result.data) {
+    throw new Error('No data in response');
+  }
+
+  return result.data;
+}
+
 export function isCorsError(error: unknown): boolean {
   return (
     error instanceof TypeError &&

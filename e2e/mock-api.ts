@@ -269,6 +269,58 @@ async function handleDaemonRequest(route: Route): Promise<void> {
     const body = JSON.parse(postData);
     const query = body.query || '';
 
+    // Handle broadcast mutations
+    if (query.includes('sendPayment')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            sendPayment: {
+              payment: {
+                hash: 'CkpMockPaymentHash12345678901234567890123456789012',
+              },
+            },
+          },
+        }),
+      });
+      return;
+    }
+
+    if (query.includes('sendDelegation')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            sendDelegation: {
+              delegation: {
+                hash: 'CkpMockDelegationHash234567890123456789012345678901',
+              },
+            },
+          },
+        }),
+      });
+      return;
+    }
+
+    if (query.includes('sendZkapp')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            sendZkapp: {
+              zkapp: {
+                hash: 'CkpMockZkAppHash345678901234567890123456789012345',
+              },
+            },
+          },
+        }),
+      });
+      return;
+    }
+
     // Handle bestChain queries (daemon epoch info + transaction listing)
     // Must be checked before 'account' since bestChain queries contain 'accountUpdates'
     if (query.includes('bestChain')) {
