@@ -1255,3 +1255,65 @@ test.describe('Mobile Menu', () => {
     await expect(networkButton).toContainText('Devnet', { timeout: 5000 });
   });
 });
+
+test.describe('Security Hardening', () => {
+  test('CSP meta tag is present in the page', async ({ page }) => {
+    await page.goto('/');
+
+    const cspMeta = page.locator(
+      'meta[http-equiv="Content-Security-Policy"]',
+    );
+    await expect(cspMeta).toHaveCount(1);
+
+    const content = await cspMeta.getAttribute('content');
+    expect(content).toContain("default-src 'self'");
+    expect(content).toContain('connect-src');
+    expect(content).toContain("img-src 'self' data:");
+  });
+
+  test('zkApp URI with unsafe protocol is rendered as plain text', async ({
+    page,
+  }) => {
+    // Intercept daemon account query to return a zkappUri with javascript: protocol
+    await page.route('**/*plain*.gcp.o1test.net/graphql', async route => {
+      const postData = route.request().postData() || '';
+      if (postData.includes('account')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: {
+              account: {
+                publicKey: FIXTURES.accounts.blockProducer,
+                balance: { total: '1000000000' },
+                nonce: '0',
+                delegate: FIXTURES.accounts.blockProducer,
+                inferredNonce: '0',
+                receiptChainHash: 'test',
+                votingFor: 'test',
+                tokenId: '1',
+                tokenSymbol: '',
+                zkappUri: 'javascript:alert(1)',
+                zkappState: null,
+                isZkApp: true,
+              },
+            },
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto(`/#/account/${FIXTURES.accounts.blockProducer}`);
+
+    // Wait for the account page to load
+    await expect(page.locator('text=javascript:alert(1)')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // The unsafe URI should be plain text, not a clickable link
+    const unsafeLink = page.locator('a[href="javascript:alert(1)"]');
+    await expect(unsafeLink).toHaveCount(0);
+  });
+});

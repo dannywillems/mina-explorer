@@ -8,6 +8,7 @@ import {
 } from '@/components/common';
 import { cn } from '@/lib/utils';
 import type { Account } from '@/types';
+import { isSafeUrl } from '@/utils/formatters';
 
 interface AccountDetailProps {
   account: Account | null;
@@ -158,15 +159,21 @@ export function AccountDetail({
               {account.zkappUri && (
                 <div className="flex items-center justify-between border-b border-border pb-3">
                   <span className="text-muted-foreground">zkApp URI</span>
-                  <a
-                    href={account.zkappUri}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    {account.zkappUri}
-                    <ExternalLink size={14} />
-                  </a>
+                  {isSafeUrl(account.zkappUri) ? (
+                    <a
+                      href={account.zkappUri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {account.zkappUri}
+                      <ExternalLink size={14} />
+                    </a>
+                  ) : (
+                    <span className="break-all text-sm text-muted-foreground">
+                      {account.zkappUri}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

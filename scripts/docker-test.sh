@@ -115,6 +115,21 @@ assert "SPA fallback serves index.html for unknown routes" \
 assert "/assets requests get an immutable cache-control header" \
   'asset=$(curl -fsS "http://localhost:${HOST_PORT}/" | grep -oE "/assets/[^\"]+\.js" | head -1); curl -fsSI "http://localhost:${HOST_PORT}${asset}" | grep -qi "cache-control: public, immutable"'
 
+assert "Content-Security-Policy header is present" \
+  'curl -fsSI "http://localhost:${HOST_PORT}/" | grep -qi "content-security-policy:"'
+
+assert "CSP includes frame-ancestors directive" \
+  'curl -fsSI "http://localhost:${HOST_PORT}/" | grep -qi "frame-ancestors"'
+
+assert "X-Frame-Options header is SAMEORIGIN" \
+  'curl -fsSI "http://localhost:${HOST_PORT}/" | grep -qi "x-frame-options: SAMEORIGIN"'
+
+assert "X-Content-Type-Options header is nosniff" \
+  'curl -fsSI "http://localhost:${HOST_PORT}/" | grep -qi "x-content-type-options: nosniff"'
+
+assert "Referrer-Policy header is set" \
+  'curl -fsSI "http://localhost:${HOST_PORT}/" | grep -qi "referrer-policy:"'
+
 assert "entrypoint logged the no-env-vars passthrough" \
   'grep -q "no MINA_EXPLORER_.* env vars set" <($RUNTIME logs "$CONTAINER_NAME" 2>&1)'
 

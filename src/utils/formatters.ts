@@ -87,6 +87,15 @@ export function isValidTransactionHash(hash: string): boolean {
   return hash.startsWith('Ckp') || hash.startsWith('5J');
 }
 
+export function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function isBlockHeight(value: string): boolean {
   return /^\d+$/.test(value);
 }
