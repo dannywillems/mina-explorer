@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 import { useBlock } from '@/hooks';
 import { BlockDetail } from '@/components/blocks';

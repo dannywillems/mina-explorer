@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ArrowUpRight, ArrowDownLeft, Sparkles } from 'lucide-react';
 import { useAccountTransactions } from '@/hooks';
 import {

@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { Search } from 'lucide-react';
 import { isValidPublicKey, formatHash } from '@/utils/formatters';
 import { cn } from '@/lib/utils';

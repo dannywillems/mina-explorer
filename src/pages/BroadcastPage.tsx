@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import {
   ChevronRight,
   ChevronDown,
