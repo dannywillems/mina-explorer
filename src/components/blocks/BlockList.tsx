@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { AlertTriangle } from 'lucide-react';
 import { HashLink, TimeAgo, Amount, LoadingSpinner } from '@/components/common';
 import { formatNumber } from '@/utils/formatters';

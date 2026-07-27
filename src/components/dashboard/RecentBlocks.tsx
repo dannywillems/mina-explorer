@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBlocks } from '@/hooks';
 import { HashLink, TimeAgo, Amount, LoadingSpinner } from '@/components/common';

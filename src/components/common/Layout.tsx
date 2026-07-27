@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router';
 import { Header } from './Header';
 import { Disclaimer } from './Disclaimer';
 import { Footer } from './Footer';

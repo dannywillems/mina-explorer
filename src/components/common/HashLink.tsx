@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Copy, Check } from 'lucide-react';
 import { formatHash, formatAddress } from '@/utils/formatters';
 import { cn } from '@/lib/utils';

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Menu, X } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { NetworkSelector } from './NetworkSelector';

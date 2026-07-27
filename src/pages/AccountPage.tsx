@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { AccountDetail, AccountTransactions } from '@/components/accounts';
 import { useAccount, useNetwork } from '@/hooks';
 

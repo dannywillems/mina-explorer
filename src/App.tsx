@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { NetworkProvider } from '@/context/NetworkContext';
 import { PriceProvider } from '@/context/PriceContext';

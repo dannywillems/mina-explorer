@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Sparkles, ExternalLink } from 'lucide-react';
 import { HashLink, LoadingSpinner } from '@/components/common';
 import { formatTimeAgo } from '@/utils/formatters';
