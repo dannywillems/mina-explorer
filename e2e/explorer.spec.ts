@@ -1,4 +1,5 @@
 import { test, expect, FIXTURES, isMocked } from './fixtures';
+import { DAEMON_URL } from './mock-api';
 
 test.describe('Mina Explorer', () => {
   test('homepage loads correctly', async ({ page }) => {
@@ -1297,7 +1298,7 @@ test.describe('Security Hardening', () => {
     page,
   }) => {
     // Intercept daemon account query to return a zkappUri with javascript: protocol
-    await page.route('**/*plain*.gcp.o1test.net/graphql', async route => {
+    await page.route(DAEMON_URL, async route => {
       const postData = route.request().postData() || '';
       if (postData.includes('account')) {
         await route.fulfill({

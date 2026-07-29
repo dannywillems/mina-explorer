@@ -14,6 +14,23 @@ export function shouldMockApi(): boolean {
 }
 
 /**
+ * URL matchers for the configured networks' endpoints. Two host families are
+ * in play — o1test.net (pre-mesa, devnet, mainnet) and minaprotocol.com
+ * (mesa) — so specs that install their own route handlers should reuse these
+ * instead of hardcoding one family's hostname.
+ *
+ * Archive: {pre-mesa-,devnet-,}archive-node-api.gcp.o1test.net,
+ *          archive-node-api.mesa-rc.minaprotocol.com
+ * Daemon:  {devnet-,mainnet-}plain-1.gcp.o1test.net/graphql,
+ *          plain-1-graphql.*.gcp.o1test.net/graphql,
+ *          plain-1-graphql.mesa-rc.minaprotocol.com/graphql
+ */
+export const ARCHIVE_URL =
+  /\/\/[\w.-]*archive-node-api[\w.-]*\.(o1test\.net|minaprotocol\.com)\//;
+export const DAEMON_URL =
+  /\/\/[\w.-]*plain[\w.-]*\.(o1test\.net|minaprotocol\.com)\/graphql/;
+
+/**
  * Setup API mocking for a page
  * Intercepts GraphQL requests and returns fixture data
  */
@@ -23,15 +40,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
   }
 
   // Mock archive node GraphQL endpoints (all networks)
-  // Patterns: *-archive-node-api.gcp.o1test.net, archive-node-api.gcp.o1test.net
-  await page.route(
-    '**/*archive-node-api.gcp.o1test.net/**',
-    handleArchiveRequest,
-  );
+  await page.route(ARCHIVE_URL, handleArchiveRequest);
 
   // Mock daemon GraphQL endpoints (all networks)
-  // Patterns: *-plain-*.gcp.o1test.net/graphql
-  await page.route('**/*plain*.gcp.o1test.net/graphql', handleDaemonRequest);
+  await page.route(DAEMON_URL, handleDaemonRequest);
 
   // Mock CoinGecko price API
   await page.route('**/api.coingecko.com/**', handlePriceRequest);

@@ -63,7 +63,7 @@ test.describe('network switch race (#66)', () => {
 
     // Mesa archive: the blocks list is slow (still pending when we switch away).
     await page.route(
-      /\/\/mesa-archive-node-api\.gcp\.o1test\.net/,
+      /\/\/archive-node-api\.mesa-rc\.minaprotocol\.com/,
       async route => {
         if (!isBlocksList(route.request().postData())) {
           await route.fallback();
