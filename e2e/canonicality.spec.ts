@@ -15,6 +15,7 @@
 
 import { test, expect, type Route } from '@playwright/test';
 import forkFixture from './fixtures/blocks-fork.json' with { type: 'json' };
+import { ARCHIVE_URL, DAEMON_URL } from './mock-api';
 
 const FORK_HEIGHT = 499998;
 const CANONICAL_HASH = '3NLcanonicalForkBlockXq7RJTujV3ZfyPHZBGrWFUqYuBZXCDQ';
@@ -129,11 +130,8 @@ async function handleDaemonRequest(route: Route): Promise<void> {
 
 test.describe('Block canonicality on forks (issue #86)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(
-      '**/*archive-node-api.gcp.o1test.net/**',
-      handleArchiveRequest,
-    );
-    await page.route('**/*plain*.gcp.o1test.net/graphql', handleDaemonRequest);
+    await page.route(ARCHIVE_URL, handleArchiveRequest);
+    await page.route(DAEMON_URL, handleDaemonRequest);
     await page.route('**/api.coingecko.com/**', route =>
       fulfillJson(route, {
         'mina-protocol': { usd: 0.5, eur: 0.45 },

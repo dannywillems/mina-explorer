@@ -1,5 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import { test, expect, isMocked, FIXTURES } from './fixtures';
+import { ARCHIVE_URL } from './mock-api';
 
 /**
  * #89 — the account transaction history must be honest:
@@ -19,7 +20,7 @@ async function routeAccountTxQueries(
   page: Page,
   handler: (route: Route) => Promise<void>,
 ): Promise<void> {
-  await page.route('**/*archive-node-api.gcp.o1test.net/**', async route => {
+  await page.route(ARCHIVE_URL, async route => {
     const postData = route.request().postData() || '';
     if (postData.includes('SearchTransaction')) {
       await handler(route);

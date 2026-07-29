@@ -44,30 +44,6 @@ const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
     id: 'mesa',
     name: 'mesa',
     displayName: 'Mesa',
-    archiveEndpoint: 'https://mesa-archive-node-api.gcp.o1test.net',
-    daemonEndpoint:
-      'https://plain-1-graphql.mina-mesa-network.gcp.o1test.net/graphql',
-    isTestnet: true,
-    otherExplorers: [
-      {
-        name: 'Mesa Explorer (Basic)',
-        url: 'https://mesa-explorer.vercel.app/',
-        description: 'Last 290 blocks only',
-      },
-    ],
-  },
-  'trailblazer-mut': {
-    id: 'trailblazer-mut',
-    name: 'trailblazer-mut',
-    displayName: 'Trailblazer MUT',
-    archiveEndpoint: 'https://archive-node-api.mesa-mut.minaprotocol.com',
-    daemonEndpoint: 'https://plain-1-graphql.mesa-mut.minaprotocol.com/graphql',
-    isTestnet: true,
-  },
-  'mesa-rc': {
-    id: 'mesa-rc',
-    name: 'mesa-rc',
-    displayName: 'Mesa Testnet RC',
     archiveEndpoint: 'https://archive-node-api.mesa-rc.minaprotocol.com',
     daemonEndpoint: 'https://plain-1-graphql.mesa-rc.minaprotocol.com/graphql',
     isTestnet: true,

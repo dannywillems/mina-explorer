@@ -1,5 +1,6 @@
 import { test, expect, FIXTURES } from './fixtures';
 import accountFixture from './fixtures/account.json' with { type: 'json' };
+import { DAEMON_URL } from './mock-api';
 
 /**
  * Regression tests for #65 — the app must never degrade to a blank page.
@@ -43,7 +44,7 @@ test.describe('Crash resilience (#65)', () => {
     // .map() on it during render and throws. This is independent of formatMina,
     // so hardening formatMina (#69) won't quietly defuse this boundary test.
     // Keyed on variables.publicKey, matching the mock's own discrimination.
-    await page.route('**/*plain*.gcp.o1test.net/graphql', async route => {
+    await page.route(DAEMON_URL, async route => {
       let publicKey = '';
       try {
         const body = JSON.parse(route.request().postData() || '{}');

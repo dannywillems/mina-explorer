@@ -15,6 +15,7 @@
 
 import { test, expect, type Route } from '@playwright/test';
 import forkFixture from './fixtures/blocks-fork.json' with { type: 'json' };
+import { ARCHIVE_URL, DAEMON_URL } from './mock-api';
 
 const ORPHAN_TX_HASH = 'CkpOrphanedBlockTxXq7RJTujV3ZfyPHZBGrWFUqYuBZXCDQV6En';
 const CANONICAL_TX_HASH =
@@ -107,11 +108,8 @@ async function handleDaemonRequest(route: Route): Promise<void> {
 
 test.describe('Transaction canonicality on forks (issue #97)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(
-      '**/*archive-node-api.gcp.o1test.net/**',
-      handleArchiveRequest,
-    );
-    await page.route('**/*plain*.gcp.o1test.net/graphql', handleDaemonRequest);
+    await page.route(ARCHIVE_URL, handleArchiveRequest);
+    await page.route(DAEMON_URL, handleDaemonRequest);
     await page.route('**/api.coingecko.com/**', route =>
       fulfillJson(route, {
         'mina-protocol': { usd: 0.5, eur: 0.45 },
@@ -165,28 +163,25 @@ test.describe('Transaction canonicality on forks (issue #97)', () => {
     // filtered query with a validation error naming the field — the signal
     // an archive that predates the filter emits — and serve unfiltered
     // queries with ALL blocks, orphan included (old-archive behavior).
-    await page.route(
-      '**/*archive-node-api.gcp.o1test.net/**',
-      async (route: Route) => {
-        const postData = route.request().postData();
-        const query: string = postData ? JSON.parse(postData).query || '' : '';
-        if (query.includes('inBestChain')) {
-          filteredAttempts++;
-          await fulfillJson(route, {
-            errors: [
-              {
-                message:
-                  'Field "inBestChain" is not defined by type ' +
-                  '"BlockQueryInput".',
-              },
-            ],
-          });
-          return;
-        }
-        unfilteredServes++;
-        await fulfillJson(route, { data: { blocks: allBlocks, networkState } });
-      },
-    );
+    await page.route(ARCHIVE_URL, async (route: Route) => {
+      const postData = route.request().postData();
+      const query: string = postData ? JSON.parse(postData).query || '' : '';
+      if (query.includes('inBestChain')) {
+        filteredAttempts++;
+        await fulfillJson(route, {
+          errors: [
+            {
+              message:
+                'Field "inBestChain" is not defined by type ' +
+                '"BlockQueryInput".',
+            },
+          ],
+        });
+        return;
+      }
+      unfilteredServes++;
+      await fulfillJson(route, { data: { blocks: allBlocks, networkState } });
+    });
 
     await page.goto('/#/transactions');
 

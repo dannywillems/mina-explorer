@@ -1,4 +1,5 @@
 import { test, expect, FIXTURES, isMocked } from './fixtures';
+import { ARCHIVE_URL } from './mock-api';
 
 /**
  * Regression tests for #67 — a failed on-chain transaction (funds did not
@@ -51,7 +52,7 @@ async function mockFailedTx(
   from: string,
   to: string,
 ): Promise<void> {
-  await page.route('**/*archive-node-api.gcp.o1test.net/**', async route => {
+  await page.route(ARCHIVE_URL, async route => {
     let query = '';
     try {
       query = JSON.parse(route.request().postData() || '{}').query || '';

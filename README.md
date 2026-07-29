@@ -97,7 +97,7 @@ src/
 |---------|---------|--------|
 | **Mainnet** | `archive-node-api.gcp.o1test.net` | `mainnet-plain-1.gcp.o1test.net/graphql` |
 | **Devnet** | `devnet-archive-node-api.gcp.o1test.net` | `devnet-plain-1.gcp.o1test.net/graphql` |
-| **Mesa** | `mesa-archive-node-api.gcp.o1test.net` | `plain-1-graphql.mina-mesa-network.gcp.o1test.net/graphql` |
+| **Mesa** | `archive-node-api.mesa-rc.minaprotocol.com` | `plain-1-graphql.mesa-rc.minaprotocol.com/graphql` |
 | **Pre-Mesa** | `pre-mesa-archive-node-api.gcp.o1test.net` | `plain-1-graphql.hetzner-pre-mesa-1.gcp.o1test.net/graphql` |
 
 ## Tech Stack

@@ -1,5 +1,6 @@
 import { test, expect, FIXTURES, isMocked } from './fixtures';
 import { decodeMemo } from '../src/utils/formatters';
+import { ARCHIVE_URL } from './mock-api';
 
 /**
  * Unit tests for #68 — decodeMemo must decode real Mina base58check memos to
@@ -45,7 +46,7 @@ test.describe('decodeMemo (#68)', () => {
     test.skip(!isMocked, 'requires the mock harness (CI or MOCK_API=true)');
     // Serve an account-history transaction whose memo is the base58check of
     // "tx-generator"; the account page must show the decoded text.
-    await page.route('**/*archive-node-api.gcp.o1test.net/**', async route => {
+    await page.route(ARCHIVE_URL, async route => {
       let query = '';
       try {
         query = JSON.parse(route.request().postData() || '{}').query || '';
