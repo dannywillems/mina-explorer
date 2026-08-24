@@ -106,7 +106,7 @@ test.describe('network switch race (#66)', () => {
     // Switch to devnet before mesa resolves.
     await page
       .locator('header button')
-      .filter({ hasText: /Pre-Mesa|Mesa|Devnet|Mainnet/ })
+      .filter({ hasText: /Mesa|Devnet|Mainnet/ })
       .first()
       .click();
     await page.locator('button:has-text("Devnet")').first().click();

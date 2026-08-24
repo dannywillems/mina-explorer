@@ -11,9 +11,9 @@ import accountFixture from './fixtures/account.json' with { type: 'json' };
 const CUSTOM_URL = 'https://custom-daemon.test/graphql';
 
 // Every preset daemon URL contains "plain" and ends in "/graphql" (mesa,
-// pre-mesa, devnet, mainnet, mesa-mut, ...). A hit here means a daemon call
-// leaked to a preset network — the bug this fixes. Kept broad on purpose so it
-// catches every preset host, not just the current default network.
+// devnet, mainnet). A hit here means a daemon call leaked to a preset network
+// — the bug this fixes. Kept broad on purpose so it catches every preset host,
+// not just the current default network.
 const PRESET_DAEMON = /plain.*graphql/;
 
 async function activateCustomEndpoint(
