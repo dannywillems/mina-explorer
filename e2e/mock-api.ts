@@ -15,14 +15,13 @@ export function shouldMockApi(): boolean {
 
 /**
  * URL matchers for the configured networks' endpoints. Two host families are
- * in play — o1test.net (pre-mesa, devnet, mainnet) and minaprotocol.com
- * (mesa) — so specs that install their own route handlers should reuse these
- * instead of hardcoding one family's hostname.
+ * in play — o1test.net (devnet, mainnet) and minaprotocol.com (mesa) — so
+ * specs that install their own route handlers should reuse these instead of
+ * hardcoding one family's hostname.
  *
- * Archive: {pre-mesa-,devnet-,}archive-node-api.gcp.o1test.net,
+ * Archive: {devnet-,}archive-node-api.gcp.o1test.net,
  *          archive-node-api.mesa-rc.minaprotocol.com
  * Daemon:  {devnet-,mainnet-}plain-1.gcp.o1test.net/graphql,
- *          plain-1-graphql.*.gcp.o1test.net/graphql,
  *          plain-1-graphql.mesa-rc.minaprotocol.com/graphql
  */
 export const ARCHIVE_URL =

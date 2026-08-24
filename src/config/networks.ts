@@ -31,19 +31,10 @@ declare global {
 }
 
 const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
-  'pre-mesa': {
-    id: 'pre-mesa',
-    name: 'pre-mesa',
-    displayName: 'Pre-Mesa',
-    archiveEndpoint: 'https://pre-mesa-archive-node-api.gcp.o1test.net',
-    daemonEndpoint:
-      'https://plain-1-graphql.hetzner-pre-mesa-1.gcp.o1test.net/graphql',
-    isTestnet: true,
-  },
   mesa: {
     id: 'mesa',
     name: 'mesa',
-    displayName: 'Mesa',
+    displayName: 'Mesa Trail',
     archiveEndpoint: 'https://archive-node-api.mesa-rc.minaprotocol.com',
     daemonEndpoint: 'https://plain-1-graphql.mesa-rc.minaprotocol.com/graphql',
     isTestnet: true,
