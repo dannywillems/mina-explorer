@@ -272,39 +272,83 @@ jobs:
           echo "--- grouped notes ---"
           cat release-notes.md
 
-      - name: Pass notes to AI step via env
+      # ----- Narrative summary -----
+      # Was actions/ai-inference against GitHub Models, which was retired on
+      # 2026-07-30 and now answers 410. That emptied the summary from v1.6.1
+      # onward without failing the job, so nobody noticed. We call the Claude
+      # Messages API directly instead: no third-party action in the release
+      # path, and a missing key or a bad response now annotates the run
+      # (::warning::) rather than silently shipping a summary-less release.
+      # Missing ANTHROPIC_API_KEY is tolerated so forks can still release.
+      - name: Summarize the release (Claude)
+        id: summary
         if: steps.tag.outputs.skip != 'true' && steps.exists.outputs.skip != 'true'
-        run: |
-          {
-            echo 'NOTES_FOR_AI<<RELEASE_NOTES_EOF'
-            cat release-notes.md
-            echo 'RELEASE_NOTES_EOF'
-          } >> "$GITHUB_ENV"
-
-      - name: AI narrative summary (free via GitHub Models)
-        if: steps.tag.outputs.skip != 'true' && steps.exists.outputs.skip != 'true'
-        continue-on-error: true
-        uses: actions/ai-inference@a7805884c80886efc241e94a5351df715968a0ad # v2.1.1
-        id: ai
-        with:
-          model: openai/gpt-4o-mini
-          system-prompt: |
-            You write concise release announcements for the mina-explorer
-            blockchain explorer. Plain prose, 2-3 sentences, no headings,
-            no bullets, no markdown decoration. Audience is end users, not
-            developers. Lead with the most user-visible change.
-          prompt: |
-            Summarize what's new in this release based on these notes:
-
-            ${{ env.NOTES_FOR_AI }}
-
-      - name: Prepend AI summary to release notes
-        if: steps.tag.outputs.skip != 'true' && steps.exists.outputs.skip != 'true' && steps.ai.outputs.response != ''
         env:
-          AI_SUMMARY: ${{ steps.ai.outputs.response }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          set -uo pipefail
+          echo "have_summary=false" >> "$GITHUB_OUTPUT"
+
+          if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            echo "::warning title=Release summary skipped::ANTHROPIC_API_KEY is not set — releasing without a narrative summary."
+            exit 0
+          fi
+
+          # jq builds the payload so the notes are escaped as a JSON string.
+          # effort=low keeps a 2-3 sentence task cheap; max_tokens covers the
+          # adaptive thinking that Opus 5 does by default.
+          PAYLOAD=$(jq -n --rawfile notes release-notes.md '{
+            model: "claude-opus-5",
+            max_tokens: 2048,
+            output_config: { effort: "low" },
+            system: "You write concise release announcements for the mina-explorer blockchain explorer. Plain prose, 2-3 sentences, no headings, no bullets, no markdown decoration. Audience is end users, not developers. Lead with the most user-visible change.",
+            messages: [{
+              role: "user",
+              content: ("Summarize what is new in this release based on these notes:\n\n" + $notes)
+            }]
+          }')
+
+          HTTP=$(curl -sS --max-time 120 -o response.json -w '%{http_code}' \
+            https://api.anthropic.com/v1/messages \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$PAYLOAD") || HTTP="000"
+
+          if [[ "$HTTP" != "200" ]]; then
+            echo "::warning title=Release summary failed::Claude API returned HTTP ${HTTP} — releasing without a narrative summary."
+            jq -r '.error.message // empty' response.json 2>/dev/null || true
+            exit 0
+          fi
+
+          STOP=$(jq -r '.stop_reason // empty' response.json)
+          if [[ "$STOP" == "refusal" || "$STOP" == "max_tokens" ]]; then
+            echo "::warning title=Release summary unusable::Claude stopped with '${STOP}' — releasing without a narrative summary."
+            exit 0
+          fi
+
+          # Test the text, not the file: jq prints a bare newline when there
+          # are no text blocks, which would pass a `[[ -s ]]` check. Only write
+          # ai-summary.txt once we know it has real content, so the Slack step
+          # can treat "file exists" as "summary exists".
+          SUMMARY=$(jq -r '[.content[]? | select(.type == "text") | .text] | join("")' response.json)
+          if [[ -z "${SUMMARY//[[:space:]]/}" ]]; then
+            echo "::warning title=Release summary empty::Claude returned no text — releasing without a narrative summary."
+            exit 0
+          fi
+
+          printf '%s\n' "$SUMMARY" > ai-summary.txt
+          echo "have_summary=true" >> "$GITHUB_OUTPUT"
+          echo "--- summary ---"
+          cat ai-summary.txt
+
+      - name: Prepend summary to release notes
+        if: steps.summary.outputs.have_summary == 'true'
+        run: |
+          set -euo pipefail
           {
-            printf '%s\n\n' "$AI_SUMMARY"
+            cat ai-summary.txt
+            echo
             cat release-notes.md
           } > tmp && mv tmp release-notes.md
           echo "--- final release notes ---"
@@ -412,14 +456,18 @@ jobs:
           SLACK_MENTION: '<!subteam^S04EBNWL4HG>'
           TAG: ${{ steps.tag.outputs.tag }}
           REPO: ${{ github.repository }}
-          AI_SUMMARY: ${{ steps.ai.outputs.response }}
         run: |
           set -euo pipefail
 
-          if [[ -z "${AI_SUMMARY// }" ]]; then
+          # Written by the "Summarize the release (Claude)" step; absent or
+          # empty whenever that step warned instead of producing a summary.
+          SUMMARY=""
+          if [[ -s ai-summary.txt ]]; then
+            SUMMARY=$(cat ai-summary.txt)
+          fi
+
+          if [[ -z "${SUMMARY//[[:space:]]/}" ]]; then
             SUMMARY="A new release of mina-explorer is out — see the link for details."
-          else
-            SUMMARY="$AI_SUMMARY"
           fi
 
           RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
