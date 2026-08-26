@@ -1,5 +1,6 @@
 export { GraphQLClient, ApiError, getClient, initClient } from './client';
 export { setDaemonEndpoint, getDaemonEndpoint } from './daemon';
+export { setRestEndpoint, getRestEndpoint, restAvailable } from './rest';
 export {
   fetchBlocks,
   fetchBlocksPaginated,

@@ -13,7 +13,12 @@ import {
   CUSTOM_ENDPOINT_KEY,
   type NetworkConfig,
 } from '@/config';
-import { initClient, getClient, setDaemonEndpoint } from '@/services/api';
+import {
+  initClient,
+  getClient,
+  setDaemonEndpoint,
+  setRestEndpoint,
+} from '@/services/api';
 import {
   getStoredItem,
   setStoredItem,
@@ -74,6 +79,7 @@ function getInitialEndpoint(): {
 const initial = getInitialEndpoint();
 initClient(initial.network.archiveEndpoint);
 setDaemonEndpoint(initial.network.daemonEndpoint);
+setRestEndpoint(initial.network.restEndpoint);
 
 interface NetworkProviderProps {
   children: ReactNode;
@@ -114,6 +120,7 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
         setNetworkState(newNetwork);
         getClient().setEndpoint(newNetwork.archiveEndpoint);
         setDaemonEndpoint(newNetwork.daemonEndpoint);
+        setRestEndpoint(newNetwork.restEndpoint);
       }
       return;
     }
@@ -133,6 +140,7 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
       setStoredItem(NETWORK_KEY, networkId);
       getClient().setEndpoint(newNetwork.archiveEndpoint);
       setDaemonEndpoint(newNetwork.daemonEndpoint);
+      setRestEndpoint(newNetwork.restEndpoint);
       const next = new URLSearchParams(searchParams);
       next.set(NETWORK_PARAM, networkId);
       setSearchParams(next, { replace: true });
@@ -155,6 +163,10 @@ export function NetworkProvider({ children }: NetworkProviderProps): ReactNode {
       setStoredItem(CUSTOM_ENDPOINT_KEY, endpoint);
       getClient().setEndpoint(endpoint);
       setDaemonEndpoint(endpoint);
+      // Cleared, not carried over: the user has redirected archive AND daemon at their
+      // own GraphQL host, so continuing to serve blocks from the previous network's REST
+      // proxy would show them a DIFFERENT network's data under their own endpoint.
+      setRestEndpoint(null);
       // Drop any stale `network` param — it doesn't apply to custom endpoints.
       const next = new URLSearchParams(searchParams);
       next.delete(NETWORK_PARAM);
