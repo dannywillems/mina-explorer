@@ -1,4 +1,5 @@
 import { getClient, type GraphQLClient } from './client';
+import { fetchBlocksRest, restAvailable } from './rest';
 import { queryDaemon, isDaemonUnavailableError } from './daemon';
 import {
   supportsBestChainFilter,
@@ -518,6 +519,13 @@ async function fetchBlocksListWithFallback(
 }
 
 export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
+  // mina-explorer-api when the active network has a proxy configured (mina-explorer-api's first client).
+  // Deliberately NOT wrapped in a try/catch that falls back to the archive: a silent
+  // fallback would mask a broken REST path behind a working one and we would ship it
+  // without noticing. If this backend is configured it is the backend; a failure surfaces.
+  if (restAvailable()) {
+    return fetchBlocksRest(limit);
+  }
   const client = getClient();
 
   // Try full query first (with protocolState for epoch/slot info), then

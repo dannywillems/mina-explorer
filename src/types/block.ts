@@ -38,8 +38,15 @@ export interface BlockSummary {
   stateHash: string;
   creator: string;
   dateTime: string;
-  txFees: string;
-  snarkFees: string;
+  /**
+   * Optional because the mina-explorer-api block-LIST DTO does not carry fees, and no list
+   * view renders them — `BlockDetail.tsx` is the only consumer and already guards with
+   * `|| '0'`. Left undefined rather than defaulted so a fabricated zero can never be
+   * mistaken for a real zero-fee block. The REST block-DETAIL endpoint does carry them
+   * (`transactionsFee` / `snarkersFee`).
+   */
+  txFees?: string | undefined;
+  snarkFees?: string | undefined;
   canonical: boolean;
   transactionCount?: number | undefined;
   coinbase?: string | undefined;

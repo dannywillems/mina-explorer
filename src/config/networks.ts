@@ -12,6 +12,21 @@ export interface NetworkConfig {
   archiveEndpoint: string;
   /** Mina daemon GraphQL endpoint for real-time account data */
   daemonEndpoint: string;
+  /**
+   * mina-explorer-api REST base, INCLUDING the network path segment
+   * (e.g. `https://<proxy>/mina-mesa`). Optional: a network without it keeps using the
+   * archive GraphQL path untouched, which is what makes this rollout per-network and
+   * reversible by config alone.
+   *
+   * This points at a PROXY that holds the API key, never at the API directly — this app is
+   * a static bundle, so a key shipped here would be readable by anyone. See
+   * `src/services/api/rest.ts`.
+   *
+   * The network segment is part of the value rather than derived, because this app's ids
+   * (`mesa`, `devnet`, `mainnet`) are not the API's (`mina-mesa`, `mina-devnet`,
+   * `mina-mainnet`) and a mapping table is a thing that goes stale silently.
+   */
+  restEndpoint?: string;
   isTestnet: boolean;
   /** Links to other explorers for this network */
   otherExplorers?: ExplorerLink[];
