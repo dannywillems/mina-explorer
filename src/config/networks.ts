@@ -52,6 +52,14 @@ const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
     displayName: 'Mesa Trail',
     archiveEndpoint: 'https://archive-node-api.mesa-rc.minaprotocol.com',
     daemonEndpoint: 'https://plain-1-graphql.mesa-rc.minaprotocol.com/graphql',
+    // FIRST network onto mina-explorer-api. Mesa leads because it is the default network,
+    // so it gets the most exercise, and it is a testnet — a regression here costs nobody a
+    // real answer. devnet and mainnet follow once this has run in the open.
+    //
+    // Only the BLOCKS LIST reads through here today; every other surface is still archive
+    // or daemon. See src/services/api/rest.ts, and note the endpoint carries the network
+    // segment because this app's ids are not the API's.
+    restEndpoint: 'https://mina-explorer-proxy.minaprotocol.com/mina-mesa',
     isTestnet: true,
   },
   devnet: {

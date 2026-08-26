@@ -30,6 +30,15 @@ export const DAEMON_URL =
   /\/\/[\w.-]*plain[\w.-]*\.(o1test\.net|minaprotocol\.com)\/graphql/;
 
 /**
+ * The mina-explorer-api read proxy (`restEndpoint` in networks.ts).
+ *
+ * Matched on the `/{network}/v1/` PATH shape rather than a hostname, so a spec that points
+ * a network at some other proxy deployment is still intercepted. The network segment is
+ * part of the API's route, not a query parameter — `/mina-mesa/v1/blocks`.
+ */
+export const REST_URL = /\/mina-[a-z0-9-]+\/v1\//;
+
+/**
  * Setup API mocking for a page
  * Intercepts GraphQL requests and returns fixture data
  */
@@ -37,6 +46,11 @@ export async function setupApiMocks(page: Page): Promise<void> {
   if (!shouldMockApi()) {
     return;
   }
+
+  // Mock mina-explorer-api REST endpoints. Registered FIRST because Playwright runs the
+  // most recently added matching handler first and these patterns do not overlap anyway;
+  // keeping REST at the top makes the read-path migration the obvious first thing here.
+  await page.route(REST_URL, handleRestRequest);
 
   // Mock archive node GraphQL endpoints (all networks)
   await page.route(ARCHIVE_URL, handleArchiveRequest);
@@ -46,6 +60,122 @@ export async function setupApiMocks(page: Page): Promise<void> {
 
   // Mock CoinGecko price API
   await page.route('**/api.coingecko.com/**', handlePriceRequest);
+}
+
+/**
+ * The blocks list as mina-explorer-api serves it, DERIVED FROM THE ARCHIVE FIXTURE.
+ *
+ * This is the whole design of the REST mock, and it is deliberate: the same ten blocks in
+ * `fixtures/blocks.json` feed both backends, so a spec asserting on rendered block content
+ * passes identically whether the network is on the archive or on REST. Hand-writing a
+ * second fixture would let the two drift, and then a spec passing would stop meaning the
+ * two backends agree — which is the ONE thing this migration has to keep proving.
+ *
+ * The transformation mirrors the API's own block-list mapper, so the shape below is a
+ * statement of what the app expects from it:
+ *
+ * - `creator` -> `accountAddress`
+ * - ISO `dateTime` -> `timestamp`, epoch MILLISECONDS
+ * - `blockHeight <= canonicalMaxBlockHeight` -> `isCanonical` (the API's rule R5, and the
+ *   same rule this app applies in `heightChainStatus`)
+ * - nanomina `coinbase` string -> MINA double
+ * - `transactionsCount` counts USER commands only, which is why these fixture blocks
+ *   report 0: they carry zkapp commands and fee transfers, neither of which counts.
+ * - `txFees`/`snarkFees` are absent from the list DTO entirely — see the note on
+ *   `mapRestBlockToSummary` for why they are left undefined rather than zeroed.
+ */
+function buildRestBlocksPage(params: URLSearchParams): unknown {
+  const source = FIXTURE_DATA.blocks.data;
+  const canonicalMax =
+    source.networkState.maxBlockHeight.canonicalMaxBlockHeight;
+
+  const all = source.blocks.map(block => {
+    const consensus = block.protocolState?.consensusState;
+    const coinbase = block.transactions?.coinbase;
+    return {
+      accountAddress: block.creator,
+      accountImg: null,
+      accountName: null,
+      blockHeight: block.blockHeight,
+      coinbase: coinbase == null ? null : Number(coinbase) / 1e9,
+      epoch: consensus?.epoch ?? null,
+      globalSlotSinceGenesis: consensus?.slotSinceGenesis ?? null,
+      isCanonical: block.blockHeight <= canonicalMax,
+      slot: consensus?.slot ?? null,
+      stateHash: block.stateHash,
+      timestamp: Date.parse(block.dateTime),
+      transactionsCount: block.transactions?.userCommands?.length ?? 0,
+    };
+  });
+
+  // Honour the filter rather than always returning everything: `type` is what distinguishes
+  // the best-chain window from the k-finalized prefix, and a mock that ignored it would
+  // happily pass the very bug this fixture exists to catch (asking for CANONICAL and
+  // rendering a list 290 blocks stale).
+  const type = params.get('type') ?? 'ALL';
+  const filtered =
+    type === 'CANONICAL'
+      ? all.filter(b => b.isCanonical)
+      : type === 'ORPHANED'
+        ? []
+        : all;
+
+  const size = Number(params.get('size') ?? 25);
+  const page = Number(params.get('page') ?? 0);
+  const ordered =
+    params.get('orderBy') === 'ASC'
+      ? [...filtered].sort((a, b) => a.blockHeight - b.blockHeight)
+      : [...filtered].sort((a, b) => b.blockHeight - a.blockHeight);
+  const slice = ordered.slice(page * size, page * size + size);
+
+  return {
+    data: slice,
+    totalElements: filtered.length,
+    totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    totalCount: filtered.length,
+    size,
+    number: page,
+    numberOfElements: slice.length,
+    first: page === 0,
+    last: (page + 1) * size >= filtered.length,
+    empty: slice.length === 0,
+  };
+}
+
+/**
+ * Handle mina-explorer-api REST requests.
+ *
+ * Dispatches on the URL PATH — unlike the GraphQL handlers above, which have to
+ * substring-match query text because every GraphQL call is a POST to one URL.
+ *
+ * An unrecognised path deliberately does NOT `route.continue()`: continuing would let a
+ * test silently reach the real proxy over the network, and a spec that quietly depends on
+ * production is worse than one that fails. Anything unmapped gets a 404 in the API's own
+ * error shape, which is what the app's `getJson` is written to surface.
+ */
+async function handleRestRequest(route: Route): Promise<void> {
+  const url = new URL(route.request().url());
+
+  // `/{network}/v1/<rest>` — strip the two leading segments to get the API path.
+  const match = url.pathname.match(/\/mina-[a-z0-9-]+\/v1\/(.*)$/);
+  const path = match ? match[1] : '';
+
+  if (path === 'blocks') {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(buildRestBlocksPage(url.searchParams)),
+    });
+    return;
+  }
+
+  await route.fulfill({
+    status: 404,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      error: `mock-api: no REST handler for /v1/${path}`,
+    }),
+  });
 }
 
 /**

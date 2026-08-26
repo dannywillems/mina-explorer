@@ -112,13 +112,41 @@ interface RestPage<T> {
 }
 
 /**
+ * A MINA decimal amount -> the nanomina string this app carries internally.
+ *
+ * THE TWO SIDES DISAGREE ON UNITS, and nothing in the type system says so — both are
+ * "a number that means an amount":
+ *
+ * - mina-explorer-api converts to a MINA double at its response boundary (its rule R6), so
+ *   a 720 MINA coinbase arrives as `720.0`.
+ * - This app carries nanomina end to end. `BlockSummary.coinbase` is a nanomina STRING, and
+ *   `formatMina` — via `Amount` — divides by 1e9 to display it.
+ *
+ * Handing the MINA value straight through therefore renders 720 MINA as `0.00000072 MINA`.
+ * That is not a hypothetical: it is what this mapper did when first written, and it is
+ * invisible in review because the mapping line reads perfectly sensibly.
+ *
+ * Converted via `toFixed(9)` and BigInt arithmetic rather than `Math.round(value * 1e9)`.
+ * The multiply agrees on every amount this endpoint currently returns — it was checked, not
+ * assumed — but it is a binary float operation on a decimal quantity, so its exactness is a
+ * property of the inputs rather than of the code. Coinbase is small and safe today;
+ * transaction fees and account balances are the same MINA-double convention and are not.
+ * The decimal-string route does not depend on the magnitude at all.
+ */
+function minaToNanominaString(mina: number): string {
+  const [whole, frac = ''] = Math.abs(mina).toFixed(9).split('.');
+  const nanomina = BigInt(whole) * 1_000_000_000n + BigInt(frac.padEnd(9, '0'));
+  return `${mina < 0 ? '-' : ''}${nanomina}`;
+}
+
+/**
  * A REST block-list item -> this app's `BlockSummary`.
  *
  * Two conversions and one deliberate omission:
  *
  * - `timestamp` is epoch MILLISECONDS; `dateTime` is an ISO string everywhere in this app.
- * - `coinbase` arrives as a MINA double (e.g. `360.0`) and `BlockSummary.coinbase` is a
- *   string, matching how the archive path already carries amounts.
+ * - `coinbase` arrives as a MINA double and is converted BACK to a nanomina string — see
+ *   `minaToNanominaString` for why that round trip is required rather than redundant.
  * - `txFees` / `snarkFees` are NOT SET. The block-list DTO does not carry them, and nothing
  *   renders them in a list — `BlockDetail.tsx:155,159` is the only consumer and it already
  *   guards with `|| '0'`. They are left undefined rather than defaulted to '0' on purpose:
@@ -136,7 +164,8 @@ export function mapRestBlockToSummary(item: RestBlockListItem): BlockSummary {
   };
   if (item.transactionsCount !== null)
     summary.transactionCount = item.transactionsCount;
-  if (item.coinbase !== null) summary.coinbase = String(item.coinbase);
+  if (item.coinbase !== null)
+    summary.coinbase = minaToNanominaString(item.coinbase);
   if (item.epoch !== null) summary.epoch = item.epoch;
   if (item.slot !== null) summary.slot = item.slot;
   if (item.globalSlotSinceGenesis !== null)
@@ -145,11 +174,37 @@ export function mapRestBlockToSummary(item: RestBlockListItem): BlockSummary {
 }
 
 /**
- * The most recent blocks, canonical-first.
+ * The most recent blocks on the best chain.
  *
- * `type: CANONICAL` is the API's own best-chain filter and is always available — unlike the
- * archive's `inBestChain`, which some deployments reject and which this app has to probe for
- * at runtime (`bestChainFilter.ts`). No fallback chain is needed here, which is the point.
+ * ## `type: ALL` — and why `CANONICAL` is the trap
+ *
+ * The API's `type` values do NOT mean what the names suggest to someone arriving from the
+ * archive:
+ *
+ * - `ALL` is **the best-chain window**, live tip included. It is not "everything":
+ *   orphaned siblings are not in it.
+ * - `CANONICAL` is the **k-FINALIZED** prefix (`blockHeight <= canonicalMaxBlockHeight`).
+ *   k is 290 blocks on Mina, so this list *starts* 290 blocks below the tip. Measured
+ *   against production: 14 h behind on mesa, 13 h on devnet, **35 h behind on mainnet**.
+ *   As the front page's "latest blocks" that is the wrong list, and wrong in the quiet
+ *   way — every row real and correctly rendered, the whole page just a day and a half
+ *   stale. This shipped as `CANONICAL` and was caught before any network was flipped on.
+ * - `ORPHANED` is the off-chain siblings.
+ *
+ * `ALL` is therefore the faithful replacement for what the archive path returns here
+ * (`fetchBlocks` asks for the latest blocks with `bestChainOnly: false`).
+ *
+ * The canonicality badge survives the swap because both backends derive the flag the SAME
+ * way — `blockHeight <= canonicalMaxBlockHeight`: the API in its block-list mapper (its
+ * rule R5), this app in `heightChainStatus`. Blocks above the canonical max arrive with
+ * `isCanonical: false` and render as pending, exactly as they do today.
+ *
+ * None of this needs a support probe, unlike the archive's `inBestChain` — which some
+ * deployments reject and which this app has to sniff for at runtime
+ * (`bestChainFilter.ts`). That is the point of the swap.
+ *
+ * `size` is capped at 50 by the API, which silently returns 50 rather than erroring, so a
+ * caller wanting more has to page.
  */
 export async function fetchBlocksRest(
   limit: number = 25,
@@ -159,7 +214,7 @@ export async function fetchBlocksRest(
     size: limit,
     sortBy: 'HEIGHT',
     orderBy: 'DESC',
-    type: 'CANONICAL',
+    type: 'ALL',
   });
   return page.data.map(mapRestBlockToSummary);
 }
