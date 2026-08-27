@@ -345,6 +345,7 @@ export function usePaginatedBlocks(
       // Offset-addressed reads are a REST-backend capability; the archive branch has only
       // a height cursor built on a tip-height-as-row-count approximation.
       if (!restAvailable()) return null;
+      const jumpKey = listKey;
       setJumping(true);
       try {
         const { offset, totalBlocks: total } = await findBlockOffsetRest(
@@ -371,17 +372,28 @@ export function usePaginatedBlocks(
             ? start / pageSize + 1
             : (start - nextShift) / pageSize + 2;
 
+        // The offset search takes several round trips, and the list can change underneath
+        // it — switching filter or page size mid-jump would otherwise apply a page number
+        // solved against the OLD list to the new one, landing somewhere unrelated with no
+        // sign anything went wrong. Same reasoning as the `gen` token on the fetch effect.
+        let applied = false;
+        setView(v => {
+          if (v.key !== jumpKey) return v;
+          applied = true;
+          return {
+            ...v,
+            page: nextPageNum,
+            shift: nextShift,
+            // Landing on the page already shown must still re-fetch: the shift may have
+            // changed even when the page number did not.
+            nonce: v.nonce + 1,
+          };
+        });
+        if (!applied) return null;
+
         totalRef.current = total;
-        totalKeyRef.current = listKey;
+        totalKeyRef.current = jumpKey;
         setTotalBlocks(total);
-        setView(v => ({
-          ...v,
-          page: nextPageNum,
-          shift: nextShift,
-          // Landing on the page already shown must still re-fetch: the shift may have
-          // changed even when the page number did not.
-          nonce: v.nonce + 1,
-        }));
         return height;
       } catch {
         return null;
