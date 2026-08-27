@@ -103,7 +103,24 @@ interface RestBlockListItem {
   globalSlotSinceGenesis: number | null;
 }
 
-/** The Envelope-A page wrapper (`data`-keyed, with `totalCount`). */
+/**
+ * The Envelope-A page wrapper (`data`-keyed, with `totalCount`).
+ *
+ * ## Read `totalCount`, NOT `totalElements` or `totalPages`
+ *
+ * These three disagree, on purpose, and picking the wrong one silently truncates the list:
+ *
+ * - **`totalCount`** is the true number of rows. Use this.
+ * - **`totalElements`** is CAPPED AT 10 000, mirroring Blockberry's own blocks list. It is a
+ *   parity artefact, not a count.
+ * - **`totalPages`** derives from the capped `totalElements`, so it reports 400 pages of 25
+ *   regardless of how much data exists.
+ *
+ * Measured on mesa: `totalCount` 16 876 (675 pages of 25) against `totalPages` 400. Paging
+ * past the cap works fine — page 500 returns real rows, page 674 returns 25, page 675
+ * returns the final 1 — so a reader that trusted `totalPages` would hide a third of the
+ * chain behind a page control that claims it does not exist.
+ */
 interface RestPage<T> {
   data: T[];
   totalElements: number;
@@ -217,4 +234,63 @@ export async function fetchBlocksRest(
     type: 'ALL',
   });
   return page.data.map(mapRestBlockToSummary);
+}
+
+/** One page of the block history, plus the true total this app pages against. */
+export interface RestBlocksPage {
+  blocks: BlockSummary[];
+  totalBlocks: number;
+  hasMore: boolean;
+}
+
+/**
+ * A page of block history, by OFFSET.
+ *
+ * ## This replaces height arithmetic, and that is the real win
+ *
+ * The archive has no offset paging, so `fetchBlocksPaginated` fakes it: the caller computes
+ * `cursor = tipHeight - (page - 1) * pageSize` and asks for blocks below that height. That
+ * arithmetic silently assumes **heights start at 1 and are dense**, and treats the tip
+ * height as a count of blocks.
+ *
+ * On mesa neither holds. Its archive starts around height 295 635, so:
+ *
+ * | | mesa |
+ * |---|---|
+ * | tip height | 312 511 |
+ * | actual blocks (`totalCount`) | 16 876 |
+ * | pages the height math offers | ~12 500 |
+ * | pages with data | 675 |
+ *
+ * So roughly 11 800 of the pages the archive path advertises are empty, and the page footer
+ * reports the tip height as "total blocks" — overstating it by about 18x. This endpoint has
+ * genuine offset pagination and a genuine row count, so both problems disappear rather than
+ * being worked around.
+ *
+ * `page` is ZERO-based here and one-based in the app, converted at this boundary — the one
+ * place that knows both conventions.
+ */
+export async function fetchBlocksPageRest(
+  pageNum: number,
+  pageSize: number = 25,
+): Promise<RestBlocksPage> {
+  const page = await getJson<RestPage<RestBlockListItem>>('/v1/blocks', {
+    page: Math.max(0, pageNum - 1),
+    size: pageSize,
+    sortBy: 'HEIGHT',
+    orderBy: 'DESC',
+    type: 'ALL',
+  });
+  const blocks = page.data.map(mapRestBlockToSummary);
+  // `totalCount` is the true row count; `totalElements` is capped at 10 000 for Blockberry
+  // parity. Fall back to `totalElements` only if the field is absent entirely — better a
+  // capped list than none — see the RestPage doc comment.
+  const totalBlocks = page.totalCount ?? page.totalElements;
+  return {
+    blocks,
+    totalBlocks,
+    // Derived from the true total rather than from "did we get a full page", which is wrong
+    // on the last page whenever the count divides exactly by the page size.
+    hasMore: pageNum * pageSize < totalBlocks,
+  };
 }

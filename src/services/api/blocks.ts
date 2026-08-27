@@ -1,5 +1,5 @@
 import { getClient, type GraphQLClient } from './client';
-import { fetchBlocksRest, restAvailable } from './rest';
+import { fetchBlocksPageRest, fetchBlocksRest, restAvailable } from './rest';
 import { queryDaemon, isDaemonUnavailableError } from './daemon';
 import {
   supportsBestChainFilter,
@@ -458,7 +458,20 @@ export interface BlocksPage {
   blocks: BlockSummary[];
   hasMore: boolean;
   nextCursor: number | null;
-  totalBlockHeight: number;
+  /**
+   * How many blocks the history holds — the denominator for the page count and the
+   * "N total blocks" footer.
+   *
+   * RENAMED from `totalBlockHeight`, because that name described the archive's
+   * APPROXIMATION rather than the quantity: with no row count available, the archive path
+   * substitutes the tip height, which only equals a block count on a chain whose archive
+   * starts at height 1. On mesa the archive starts near 295 635, so the old name carried
+   * 312 511 into a field the UI renders as "total blocks" and divides to get a page count.
+   * The REST path supplies the real count (`totalCount`), so keeping a height-shaped name
+   * would have been the same unit confusion that made a 720 MINA coinbase render as
+   * 0.00000072.
+   */
+  totalBlocks: number;
 }
 
 // Try each field set in order, first with the best-chain filter (excludes
@@ -540,42 +553,51 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
   return data.blocks.map(block => mapApiBlockToSummary(block, canonicalMax));
 }
 
+/**
+ * One page of block history.
+ *
+ * Takes a ONE-BASED PAGE NUMBER, not a cursor. The archive has no offset paging, so its
+ * branch still derives a height cursor — but that arithmetic now lives here, beside the
+ * backend that needs it, instead of in the hook where it was applied to both backends. See
+ * `fetchBlocksPageRest` for what the height math gets wrong on a chain whose archive does
+ * not start at height 1.
+ *
+ * `knownTotal` is the caller's current total (tip height on the archive path), needed only
+ * to place the cursor for page > 1. The REST path ignores it and asks for the page directly.
+ */
 export async function fetchBlocksPaginated(
-  limit: number = 25,
-  beforeHeight?: number,
+  pageSize: number = 25,
+  pageNum: number = 1,
+  knownTotal: number = 0,
 ): Promise<BlocksPage> {
-  const client = getClient();
-
-  // If no cursor, get the latest blocks
-  if (!beforeHeight) {
-    const data = await fetchBlocksListWithFallback(
-      client,
-      ['BASIC', 'MINIMAL'],
-      { limit },
-      false,
-    );
-    const canonicalMax =
-      data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
-    const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
-    const blocks = data.blocks.map(block =>
-      mapApiBlockToSummary(block, canonicalMax),
-    );
-    const lastBlock = blocks[blocks.length - 1];
-
+  if (restAvailable()) {
+    const page = await fetchBlocksPageRest(pageNum, pageSize);
     return {
-      blocks,
-      hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
-      nextCursor: lastBlock ? lastBlock.blockHeight : null,
-      totalBlockHeight: totalHeight,
+      blocks: page.blocks,
+      hasMore: page.hasMore,
+      // The REST backend pages by offset, so there is no cursor to carry. Nothing reads
+      // this field; it stays for the archive branch below.
+      nextCursor: null,
+      totalBlocks: page.totalBlocks,
     };
   }
 
-  // Paginated query
+  const client = getClient();
+
+  // Page 1 needs no cursor: the unfiltered query already returns the latest blocks.
+  let beforeHeight: number | undefined;
+  if (pageNum > 1 && knownTotal > 0) {
+    beforeHeight = knownTotal - (pageNum - 1) * pageSize + 1;
+    if (beforeHeight <= 0) beforeHeight = undefined;
+  }
+
   const data = await fetchBlocksListWithFallback(
     client,
     ['BASIC', 'MINIMAL'],
-    { limit, maxBlockHeight: beforeHeight },
-    true,
+    beforeHeight
+      ? { limit: pageSize, maxBlockHeight: beforeHeight }
+      : { limit: pageSize },
+    Boolean(beforeHeight),
   );
   const canonicalMax = data.networkState.maxBlockHeight.canonicalMaxBlockHeight;
   const totalHeight = data.networkState.maxBlockHeight.pendingMaxBlockHeight;
@@ -588,7 +610,9 @@ export async function fetchBlocksPaginated(
     blocks,
     hasMore: lastBlock ? lastBlock.blockHeight > 1 : false,
     nextCursor: lastBlock ? lastBlock.blockHeight : null,
-    totalBlockHeight: totalHeight,
+    // The archive's approximation: the tip height stands in for a row count. See the
+    // `totalBlocks` doc comment for when that is wrong and by how much.
+    totalBlocks: totalHeight,
   };
 }
 

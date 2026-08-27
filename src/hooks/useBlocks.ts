@@ -145,7 +145,8 @@ interface UsePaginatedBlocksResult {
   loading: boolean;
   error: string | null;
   hasMore: boolean;
-  totalBlockHeight: number;
+  /** Total blocks in the history — the page-count denominator and the footer figure. */
+  totalBlocks: number;
   page: number;
   totalPages: number;
   goToPage: (page: number) => void;
@@ -164,9 +165,9 @@ export function usePaginatedBlocks(
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [totalBlockHeight, setTotalBlockHeight] = useState(0);
+  const [totalBlocks, setTotalBlocks] = useState(0);
 
-  const totalPages = Math.ceil(totalBlockHeight / pageSize);
+  const totalPages = Math.ceil(totalBlocks / pageSize);
 
   const loadPage = useCallback(
     async (pageNum: number, forceRefresh: boolean = false) => {
@@ -175,23 +176,18 @@ export function usePaginatedBlocks(
       setError(null);
 
       try {
-        // Calculate cursor for the page
-        // For page 1, no cursor needed (get latest)
-        // For page N, get blocks before height (totalHeight - (N-1) * pageSize + 1)
-        let cursor: number | undefined;
-        if (pageNum > 1 && totalBlockHeight > 0) {
-          cursor = totalBlockHeight - (pageNum - 1) * pageSize + 1;
-          if (cursor <= 0) cursor = undefined;
-        }
-
-        const data = await fetchBlocksPaginated(pageSize, cursor);
+        // The page NUMBER goes to the backend, not a height cursor. The archive still
+        // needs a cursor and derives one itself from `totalBlocks`; the REST backend pages
+        // by offset and ignores it. Keeping that arithmetic here applied the archive's
+        // assumptions — dense heights starting at 1 — to both backends.
+        const data = await fetchBlocksPaginated(pageSize, pageNum, totalBlocks);
         if (gen.isCurrent(token)) {
           setBlocks(data.blocks);
           setHasMore(data.hasMore);
 
           // Only update total on first load or refresh
-          if (pageNum === 1 || forceRefresh || totalBlockHeight === 0) {
-            setTotalBlockHeight(data.totalBlockHeight);
+          if (pageNum === 1 || forceRefresh || totalBlocks === 0) {
+            setTotalBlocks(data.totalBlocks);
           }
         }
       } catch (err) {
@@ -204,22 +200,22 @@ export function usePaginatedBlocks(
         if (gen.isCurrent(token)) setLoading(false);
       }
     },
-    [pageSize, totalBlockHeight],
+    [pageSize, totalBlocks],
   );
 
   // Reset and load when network changes
   useEffect(() => {
     setPage(1);
-    setTotalBlockHeight(0);
+    setTotalBlocks(0);
     loadPage(1, true);
   }, [network.id, pageSize]);
 
   // Load page when page number changes (but not on initial mount)
   useEffect(() => {
-    if (totalBlockHeight > 0) {
+    if (totalBlocks > 0) {
       loadPage(page);
     }
-  }, [page, totalBlockHeight]);
+  }, [page, totalBlocks]);
 
   const goToPage = useCallback(
     (newPage: number) => {
@@ -252,7 +248,7 @@ export function usePaginatedBlocks(
     loading,
     error,
     hasMore,
-    totalBlockHeight,
+    totalBlocks,
     page,
     totalPages,
     goToPage,

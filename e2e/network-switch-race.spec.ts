@@ -39,6 +39,42 @@ test.describe('network switch race (#66)', () => {
     return clone;
   }
 
+  /**
+   * The same marked blocks in mina-explorer-api's DTO shape.
+   *
+   * Mesa reads the REST backend now, so THIS race is cross-backend: mesa over REST against
+   * devnet over the archive. That is a better test of the guard than the original, which
+   * raced two archives — the generation guard has to hold regardless of which client
+   * dispatched the superseded request.
+   *
+   * `totalCount` stays SHARED_MAX_HEIGHT for the reason the constant exists: an equal total
+   * keeps the stale response's setTotalBlocks a no-op, so usePaginatedBlocks' second effect
+   * does not refetch and incidentally mask the race.
+   */
+  function markedRestBlocks(base: number): unknown {
+    const clone = JSON.parse(JSON.stringify(FIXTURE_DATA.blocks));
+    const count = clone.data.blocks.length;
+    return {
+      data: clone.data.blocks.map((b: Record<string, unknown>, i: number) => ({
+        accountAddress: b.creator,
+        accountImg: null,
+        accountName: null,
+        blockHeight: base + (count - 1 - i),
+        coinbase: 0,
+        epoch: null,
+        globalSlotSinceGenesis: null,
+        isCanonical: true,
+        slot: null,
+        stateHash: b.stateHash,
+        timestamp: Date.parse(b.dateTime as string),
+        transactionsCount: 0,
+      })),
+      totalElements: SHARED_MAX_HEIGHT,
+      totalPages: 1,
+      totalCount: SHARED_MAX_HEIGHT,
+    };
+  }
+
   test('a slow previous-network response never overwrites the new network', async ({
     page,
   }) => {
@@ -61,24 +97,18 @@ test.describe('network switch race (#66)', () => {
       }
     };
 
-    // Mesa archive: the blocks list is slow (still pending when we switch away).
-    await page.route(
-      /\/\/archive-node-api\.mesa-rc\.minaprotocol\.com/,
-      async route => {
-        if (!isBlocksList(route.request().postData())) {
-          await route.fallback();
-          return;
-        }
-        mesaBlocksRequested = true;
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(markedBlocks(MESA_BASE)),
-        });
-        mesaBlocksFulfilled = true;
-      },
-    );
+    // Mesa now reads mina-explorer-api, so the slow side is the REST backend, matched on
+    // its path shape rather than a GraphQL query name.
+    await page.route(/\/mina-mesa\/v1\/blocks/, async route => {
+      mesaBlocksRequested = true;
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(markedRestBlocks(MESA_BASE)),
+      });
+      mesaBlocksFulfilled = true;
+    });
 
     // Devnet archive: the blocks list answers instantly.
     await page.route(
