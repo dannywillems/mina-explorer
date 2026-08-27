@@ -336,6 +336,33 @@ test.describe('blocks page controls', () => {
     expect(heights[heights.length - 1]).toBeLessThan(500);
   });
 
+  test('after a jump the newest blocks are still reachable from page 1', async ({
+    page,
+  }) => {
+    // The regression this pins: centring a height means the page grid no longer starts on a
+    // multiple of the page size. Sliding EVERY boundary down by the remainder — the obvious
+    // implementation — left the newest rows in front of page 1 and reachable from no page
+    // at all, "First page" included. Page 1 is short instead, so the tiling stays complete.
+    await routeApi(page);
+    await page.goto('/#/blocks');
+    await expect(page.locator('tbody tr').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.getByTestId('blocks-goto-height').fill('500');
+    await page.getByRole('button', { name: 'Go' }).click();
+    await expect
+      .poll(async () => heightAt(page, 10), { timeout: 15000 })
+      .toBe(500);
+
+    await page.getByTitle('First page').click();
+
+    // The very newest block, not the one 11 rows down from it.
+    await expect
+      .poll(async () => heightAt(page, 0), { timeout: 15000 })
+      .toBe(TIP);
+  });
+
   test('jumping works under the canonical filter, where the offset differs', async ({
     page,
   }) => {

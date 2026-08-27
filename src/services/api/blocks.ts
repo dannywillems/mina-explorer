@@ -570,21 +570,21 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
  * `knownTotal` is the caller's current total (tip height on the archive path), needed only
  * to place the cursor for page > 1. The REST path ignores it and asks for the page directly.
  *
- * `opts.shift` slides every page boundary down the list by 0..pageSize-1 rows, which is how
- * /#/blocks centres a page on a requested block height while keeping page numbers counted
- * from the tip. `opts.filter` selects the canonicality subset. Both are REST-only: the
- * archive branch has neither an offset to shift nor a faithful way to express the filter
- * (its own `inBestChain` keeps unfinalized tip blocks and is not even universally
- * supported), so `BlocksPage` does not offer either control on an archive-backed network.
+ * `opts.offset` is the exact first row wanted, which is how /#/blocks centres a page on a
+ * requested block height; it defaults to the plain `(pageNum - 1) * pageSize`.
+ * `opts.filter` selects the canonicality subset. Both are REST-only: the archive branch can
+ * address rows only by a height cursor, and cannot express the filter faithfully (its own
+ * `inBestChain` keeps unfinalized tip blocks and is not even universally supported), so
+ * `BlocksPage` does not offer either control on an archive-backed network.
  */
 export async function fetchBlocksPaginated(
   pageSize: number = 25,
   pageNum: number = 1,
   knownTotal: number = 0,
-  opts: { shift?: number; filter?: BlockFilter } = {},
+  opts: { offset?: number; filter?: BlockFilter } = {},
 ): Promise<BlocksPage> {
   if (restAvailable()) {
-    const offset = (pageNum - 1) * pageSize + (opts.shift ?? 0);
+    const offset = opts.offset ?? (pageNum - 1) * pageSize;
     const page = await fetchBlocksRangeRest(offset, pageSize, opts.filter);
     return {
       blocks: page.blocks,

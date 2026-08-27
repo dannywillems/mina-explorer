@@ -170,6 +170,44 @@ interface PaginatedBlocksOptions {
   filter?: BlockFilter;
 }
 
+/**
+ * The rows page `p` covers, given a page size and a grid shift.
+ *
+ * With `shift === 0` this is the plain uniform grid the page has always used.
+ *
+ * A non-zero shift is set only by a height jump, to put the target row at a page's
+ * midpoint. The remainder it creates has to go somewhere, and PAGE 1 IS MADE SHORT to hold
+ * it: page 1 covers `[0, shift)`, page 2 starts at `shift`, and every page after that is
+ * full. The pages therefore still tile `[0, total)` — no row is unreachable and none is
+ * shown twice.
+ *
+ * The obvious alternative — sliding every boundary down, page 1 included — is what this
+ * replaces, and it silently hides rows: with a shift of 11, page 1 started at row 11 and
+ * the eleven NEWEST blocks could not be reached from any page, "First page" included.
+ * Putting the remainder in page 1's tail instead would make one page up to twice the size
+ * the user asked for.
+ */
+export function pageRange(
+  page: number,
+  pageSize: number,
+  shift: number,
+): { offset: number; count: number } {
+  if (shift === 0) return { offset: (page - 1) * pageSize, count: pageSize };
+  if (page === 1) return { offset: 0, count: shift };
+  return { offset: shift + (page - 2) * pageSize, count: pageSize };
+}
+
+/** How many pages `total` rows make under the same grid. */
+export function pageCount(
+  total: number,
+  pageSize: number,
+  shift: number,
+): number {
+  if (total <= 0) return 1;
+  if (shift === 0) return Math.max(1, Math.ceil(total / pageSize));
+  return 1 + Math.max(1, Math.ceil((total - shift) / pageSize));
+}
+
 export function usePaginatedBlocks(
   options: PaginatedBlocksOptions = {},
 ): UsePaginatedBlocksResult {
@@ -198,10 +236,10 @@ export function usePaginatedBlocks(
    *   resets, because a page number means nothing against a different list — and the REST
    *   `totalCount` really is different per filter (mesa: 17 130 for `all`, 15 777 for
    *   `canonical`).
-   * - `shift` slides every page boundary down the list by 0..pageSize-1 rows. Zero is the
-   *   default and reproduces the original behaviour exactly; `jumpToHeight` sets it so a
-   *   requested height lands mid-page. Page NUMBERS stay counted from the tip either way,
-   *   so "page 8 432 of 8 500" still says where in the chain you are.
+   * - `shift` moves the page grid so a jumped-to height can sit mid-page — see `pageRange`
+   *   for how the pages still tile the list. Zero is the default and reproduces the
+   *   original behaviour exactly. Page NUMBERS stay counted from the tip either way, so
+   *   "page 8 432 of 8 500" still says where in the chain you are.
    * - `nonce` exists so Refresh can re-fetch a page it is already on.
    */
   const listKey = `${network.id}|${pageSize}|${filter}`;
@@ -228,15 +266,20 @@ export function usePaginatedBlocks(
    * ping-pong above rebuilt. A ref is read at fetch time and never schedules anything.
    */
   const totalRef = useRef(0);
+  /** Which list `totalRef` was measured against, so a stale total is never reused. */
+  const totalKeyRef = useRef(listKey);
 
-  // Clamped to 1 so that a not-yet-loaded or single-page list still has a page 1 for
-  // `goToPage` to accept — unclamped, `totalPages === 0` made goToPage reject every value.
-  const totalPages = Math.max(1, Math.ceil((totalBlocks - shift) / pageSize));
+  // Never below 1: a not-yet-loaded or single-page list still needs a page 1 for `goToPage`
+  // to accept — unclamped, `totalPages === 0` made goToPage reject every value.
+  const totalPages = pageCount(totalBlocks, pageSize, shift);
 
   useEffect(() => {
     // A new list: drop the previous list's total so it cannot be used as a cursor or a
-    // denominator for this one.
-    if (view.page === 1 && view.shift === 0) {
+    // denominator for this one. Keyed on the LIST, not on "are we on page 1" — the latter
+    // also zeroed the total every time the user merely navigated back to page 1, which
+    // blanked the "N total blocks" line and collapsed the pager mid-load.
+    if (totalKeyRef.current !== view.key) {
+      totalKeyRef.current = view.key;
       totalRef.current = 0;
       setTotalBlocks(0);
     }
@@ -245,12 +288,14 @@ export function usePaginatedBlocks(
     setLoading(true);
     setError(null);
 
+    const { offset, count } = pageRange(view.page, pageSize, view.shift);
+
     // The page NUMBER goes to the backend, not a height cursor. The archive still needs a
     // cursor and derives one itself from the known total; the REST backend pages by offset
     // and ignores it. Keeping that arithmetic here applied the archive's assumptions —
     // dense heights starting at 1 — to both backends.
-    fetchBlocksPaginated(pageSize, view.page, totalRef.current, {
-      shift: view.shift,
+    fetchBlocksPaginated(count, view.page, totalRef.current, {
+      offset,
       filter,
     })
       .then(data => {
@@ -317,12 +362,22 @@ export function usePaginatedBlocks(
           Math.max(0, total - pageSize),
         );
 
+        // Solve `pageRange` for the page whose window begins at `start`. A start already on
+        // the uniform grid needs no shift at all, which keeps the common case — jumping to
+        // a height that happens to land on a boundary — on the plain grid.
+        const nextShift = start % pageSize;
+        const nextPageNum =
+          nextShift === 0
+            ? start / pageSize + 1
+            : (start - nextShift) / pageSize + 2;
+
         totalRef.current = total;
+        totalKeyRef.current = listKey;
         setTotalBlocks(total);
         setView(v => ({
           ...v,
-          page: Math.floor(start / pageSize) + 1,
-          shift: start % pageSize,
+          page: nextPageNum,
+          shift: nextShift,
           // Landing on the page already shown must still re-fetch: the shift may have
           // changed even when the page number did not.
           nonce: v.nonce + 1,
@@ -334,7 +389,7 @@ export function usePaginatedBlocks(
         setJumping(false);
       }
     },
-    [filter, pageSize],
+    [filter, pageSize, listKey],
   );
 
   return {
