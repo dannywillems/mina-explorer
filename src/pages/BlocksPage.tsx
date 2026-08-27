@@ -6,6 +6,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CornerDownLeft,
+  X,
 } from 'lucide-react';
 import { usePaginatedBlocks, useNetwork } from '@/hooks';
 import { BlockList } from '@/components/blocks';
@@ -91,6 +92,7 @@ export function BlocksPage(): ReactNode {
     refresh,
     jumpToHeight,
     jumping,
+    centeredOn,
   } = usePaginatedBlocks({ pageSize, filter: effectiveFilter });
 
   useEffect(() => {
@@ -162,6 +164,32 @@ export function BlocksPage(): ReactNode {
           Canonical blocks are finalized after 290 confirmations, so the newest
           block here is roughly 290 blocks behind the chain tip.
         </p>
+      )}
+
+      {/*
+        Centring a block costs a short first page — the pages have to tile the list somehow,
+        and the alternative hides the newest blocks. Say so rather than leaving an
+        unexplained 11-row page 1, and offer the way back in one click instead of making
+        Refresh the only escape.
+      */}
+      {centeredOn !== null && (
+        <div
+          data-testid="blocks-centered-notice"
+          className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+        >
+          <span>
+            Pages are centred on block {formatNumber(centeredOn)}, so the first
+            page is short.
+          </span>
+          <button
+            onClick={refresh}
+            disabled={busy}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
+          >
+            <X size={12} />
+            Reset paging
+          </button>
+        </div>
       )}
 
       <BlockList blocks={blocks} loading={busy} error={error} />
@@ -402,7 +430,7 @@ function GoToHeight({
         <p
           data-testid="blocks-goto-error"
           className="text-xs text-destructive"
-          role="status"
+          role="alert"
         >
           No block at that height in this list.
         </p>

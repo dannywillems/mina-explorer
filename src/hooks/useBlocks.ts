@@ -163,6 +163,14 @@ interface UsePaginatedBlocksResult {
   jumpToHeight: (height: number) => Promise<number | null>;
   /** True while `jumpToHeight` is resolving an offset. */
   jumping: boolean;
+  /**
+   * The height the page grid is currently centred on, or null on the plain grid.
+   *
+   * Centring costs a short page 1 (see `pageRange`), which is worth disclosing rather than
+   * leaving as an unexplained 11-row page — so the page can say what it is centred on and
+   * offer a way back.
+   */
+  centeredOn: number | null;
 }
 
 interface PaginatedBlocksOptions {
@@ -187,7 +195,7 @@ interface PaginatedBlocksOptions {
  * Putting the remainder in page 1's tail instead would make one page up to twice the size
  * the user asked for.
  */
-export function pageRange(
+function pageRange(
   page: number,
   pageSize: number,
   shift: number,
@@ -198,11 +206,7 @@ export function pageRange(
 }
 
 /** How many pages `total` rows make under the same grid. */
-export function pageCount(
-  total: number,
-  pageSize: number,
-  shift: number,
-): number {
+function pageCount(total: number, pageSize: number, shift: number): number {
   if (total <= 0) return 1;
   if (shift === 0) return Math.max(1, Math.ceil(total / pageSize));
   // `Math.max(0, ...)` and not `Math.max(1, ...)`: when the whole list fits in the short
@@ -247,18 +251,25 @@ export function usePaginatedBlocks(
    * - `nonce` exists so Refresh can re-fetch a page it is already on.
    */
   const listKey = `${network.id}|${pageSize}|${filter}`;
-  const [view, setView] = useState({
+  const [view, setView] = useState<{
+    key: string;
+    page: number;
+    shift: number;
+    nonce: number;
+    centeredOn: number | null;
+  }>({
     key: listKey,
     page: 1,
     shift: 0,
     nonce: 0,
+    centeredOn: null,
   });
 
   // Adjusting state during render, rather than in an effect: React discards this render and
   // re-runs the component immediately, so the fetch effect below never once fires with a
   // page number belonging to the previous list.
   if (view.key !== listKey) {
-    setView({ key: listKey, page: 1, shift: 0, nonce: 0 });
+    setView({ key: listKey, page: 1, shift: 0, nonce: 0, centeredOn: null });
   }
   const { page, shift } = view;
 
@@ -272,6 +283,14 @@ export function usePaginatedBlocks(
   const totalRef = useRef(0);
   /** Which list `totalRef` was measured against, so a stale total is never reused. */
   const totalKeyRef = useRef(listKey);
+  /**
+   * The live list key, readable from an async callback after an `await`.
+   *
+   * Written during render, so it is always the key of the most recent render — which is
+   * what `jumpToHeight` needs to decide whether the list moved under its search.
+   */
+  const listKeyRef = useRef(listKey);
+  listKeyRef.current = listKey;
 
   // Never below 1: a not-yet-loaded or single-page list still needs a page 1 for `goToPage`
   // to accept — unclamped, `totalPages === 0` made goToPage reject every value.
@@ -341,7 +360,13 @@ export function usePaginatedBlocks(
   }, []);
 
   const refresh = useCallback(() => {
-    setView(v => ({ ...v, page: 1, shift: 0, nonce: v.nonce + 1 }));
+    setView(v => ({
+      ...v,
+      page: 1,
+      shift: 0,
+      nonce: v.nonce + 1,
+      centeredOn: null,
+    }));
   }, []);
 
   const jumpToHeight = useCallback(
@@ -382,27 +407,36 @@ export function usePaginatedBlocks(
             : (start - nextShift) / pageSize + 2;
 
         // The offset search takes several round trips, and the list can change underneath
-        // it — switching filter or page size mid-jump would otherwise apply a page number
-        // solved against the OLD list to the new one, landing somewhere unrelated with no
-        // sign anything went wrong. Same reasoning as the `gen` token on the fetch effect.
-        let applied = false;
-        setView(v => {
-          if (v.key !== jumpKey) return v;
-          applied = true;
-          return {
-            ...v,
-            page: nextPageNum,
-            shift: nextShift,
-            // Landing on the page already shown must still re-fetch: the shift may have
-            // changed even when the page number did not.
-            nonce: v.nonce + 1,
-          };
-        });
-        if (!applied) return null;
+        // it — switching network, filter or page size mid-jump would otherwise apply a page
+        // number solved against the OLD list to the new one, landing somewhere unrelated
+        // with no sign anything went wrong. Same reasoning as the `gen` token on the fetch
+        // effect.
+        //
+        // The decision is made from a ref written during render, NOT from a flag set inside
+        // the `setView` updater. React does not promise to run an updater before `setState`
+        // returns — it happens to today via the eager-state bailout — and it deliberately
+        // double-invokes updaters in StrictMode. Reading such a flag would report a jump
+        // that DID apply as a failure, showing "no block at that height" over a correct
+        // result. The updater keeps its own guard as well, so the unsafe write is impossible
+        // either way; this one only decides what to tell the caller.
+        if (listKeyRef.current !== jumpKey) return null;
 
         totalRef.current = total;
         totalKeyRef.current = jumpKey;
         setTotalBlocks(total);
+        setView(v =>
+          v.key !== jumpKey
+            ? v
+            : {
+                ...v,
+                page: nextPageNum,
+                shift: nextShift,
+                centeredOn: height,
+                // Landing on the page already shown must still re-fetch: the shift may have
+                // changed even when the page number did not.
+                nonce: v.nonce + 1,
+              },
+        );
         return height;
       } catch {
         return null;
@@ -427,6 +461,7 @@ export function usePaginatedBlocks(
     refresh,
     jumpToHeight,
     jumping,
+    centeredOn: view.centeredOn,
   };
 }
 

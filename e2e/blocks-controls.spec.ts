@@ -179,7 +179,7 @@ test.describe('blocks page controls', () => {
     });
   });
 
-  test('defaults to 20 rows of the unfiltered list in one request', async ({
+  test('defaults to 20 rows of the unfiltered list, on the API grid', async ({
     page,
   }) => {
     const calls = await routeApi(page);
@@ -189,8 +189,13 @@ test.describe('blocks page controls', () => {
     });
 
     expect(await rowHeights(page)).toHaveLength(20);
-    // A 20-row page at offset 0 sits on the API's own grid, so it must still cost exactly
-    // one request — the offset plumbing must not turn the common case into a stitch.
+    // A 20-row page at offset 0 sits on the API's own grid, so it goes out as ONE request
+    // rather than a stitch — the offset plumbing must not change the common case's shape.
+    //
+    // The request COUNT is deliberately not asserted on mount: React StrictMode remounts in
+    // dev, so a dev run legitimately sees two. The page-size test below pins the count
+    // instead, on a user action, where it is unambiguous — and that is the assertion that
+    // catches a re-introduced double fetch.
     const first = calls[0];
     expect(first?.page).toBe(0);
     expect(first?.size).toBe(20);
@@ -277,7 +282,11 @@ test.describe('blocks page controls', () => {
 
     // Nothing may ask for more than the API allows — that is a 400, not a short page.
     expect(calls.every(c => c.size <= 50)).toBe(true);
+    // EXACTLY four, and four in total: this is also the guard on the page-1 double fetch
+    // the single request descriptor removed. With the two ping-ponging effects it was
+    // eight, which is how that bug was caught in the first place.
     expect(calls.filter(c => c.size === 50)).toHaveLength(4);
+    expect(calls).toHaveLength(4);
 
     // And the stitch must be in order and gapless across the chunk seams.
     const heights = await rowHeights(page);
@@ -355,12 +364,26 @@ test.describe('blocks page controls', () => {
       .poll(async () => heightAt(page, 10), { timeout: 15000 })
       .toBe(500);
 
+    // Centring 500 at offset 501 puts the grid at shift 11, which the page must SAY —
+    // an unexplained 11-row first page reads as a bug, and Refresh should not be the only
+    // way back to the plain grid.
+    await expect(page.getByTestId('blocks-centered-notice')).toBeVisible();
+
     await page.getByTitle('First page').click();
 
     // The very newest block, not the one 11 rows down from it.
     await expect
       .poll(async () => heightAt(page, 0), { timeout: 15000 })
       .toBe(TIP);
+    // And page 1 is the short one that holds the remainder — 11 rows, not 20.
+    expect(await rowHeights(page)).toHaveLength(11);
+
+    // Reset paging restores the uniform grid: a full page 1 and no notice.
+    await page.getByRole('button', { name: 'Reset paging' }).click();
+    await expect
+      .poll(async () => (await rowHeights(page)).length, { timeout: 15000 })
+      .toBe(20);
+    await expect(page.getByTestId('blocks-centered-notice')).toHaveCount(0);
   });
 
   test('jumping works under the canonical filter, where the offset differs', async ({
