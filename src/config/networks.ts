@@ -52,9 +52,9 @@ const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
     displayName: 'Mesa Trail',
     archiveEndpoint: 'https://archive-node-api.mesa-rc.minaprotocol.com',
     daemonEndpoint: 'https://plain-1-graphql.mesa-rc.minaprotocol.com/graphql',
-    // FIRST network onto mina-explorer-api. Mesa leads because it is the default network,
-    // so it gets the most exercise, and it is a testnet — a regression here costs nobody a
-    // real answer. devnet and mainnet follow once this has run in the open.
+    // Mesa led onto mina-explorer-api, as the default network and a testnet, so a
+    // regression cost nobody a real answer. devnet and mainnet followed once it had run in
+    // the open and the paging was verified against each chain's real end-of-range.
     //
     // Only the BLOCKS LIST reads through here today; every other surface is still archive
     // or daemon. See src/services/api/rest.ts, and note the endpoint carries the network
@@ -68,6 +68,7 @@ const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
     displayName: 'Devnet',
     archiveEndpoint: 'https://devnet-archive-node-api.gcp.o1test.net',
     daemonEndpoint: 'https://devnet-plain-1.gcp.o1test.net/graphql',
+    restEndpoint: 'https://mina-explorer-proxy.minaprotocol.com/mina-devnet',
     isTestnet: true,
     otherExplorers: [
       {
@@ -82,6 +83,7 @@ const COMPILED_NETWORKS: Record<string, NetworkConfig> = {
     displayName: 'Mainnet',
     archiveEndpoint: 'https://archive-node-api.gcp.o1test.net',
     daemonEndpoint: 'https://mainnet-plain-1.gcp.o1test.net/graphql',
+    restEndpoint: 'https://mina-explorer-proxy.minaprotocol.com/mina-mainnet',
     isTestnet: false,
     otherExplorers: [
       {
