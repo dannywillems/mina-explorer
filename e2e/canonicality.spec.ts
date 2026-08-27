@@ -142,7 +142,14 @@ test.describe('Block canonicality on forks (issue #86)', () => {
   test('blocks list shows a single canonical entry at a forked height', async ({
     page,
   }) => {
-    await page.goto('/#/blocks');
+    // devnet EXPLICITLY, because this asserts the ARCHIVE's fork handling — the
+    // `inBestChain` filter excluding an orphaned sibling, and the `bestChainFilter` probe
+    // behind it. The default network (mesa) now reads the blocks list from
+    // mina-explorer-api, where `type=ALL` is already the best-chain window and the orphan
+    // never reaches the client, so running this there would exercise the API's filtering
+    // rather than this app's. The archive path still serves every network that has not
+    // moved, so the behaviour under test is live, not legacy.
+    await page.goto('/#/blocks?network=devnet');
 
     // Exactly one row at the fork height: the best-chain block, not the
     // orphaned sibling (which the old height heuristic also badged Canonical)

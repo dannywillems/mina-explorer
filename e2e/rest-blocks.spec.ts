@@ -10,17 +10,14 @@
  * They install their own routing rather than reusing setupApiMocks, so they run
  * deterministically outside CI and can COUNT requests per backend.
  *
- * ## Scope: the HOME dashboard, not /#/blocks
+ * ## Both blocks surfaces now read REST
  *
- * Two different surfaces show "the blocks list" and they use different fetchers:
+ *   RecentBlocks (home)    -> useBlocks          -> fetchBlocks          -> REST
+ *   BlocksPage (/#/blocks) -> usePaginatedBlocks -> fetchBlocksPaginated -> REST
  *
- *   RecentBlocks (home)  -> useBlocks           -> fetchBlocks           -> REST
- *   BlocksPage (/#/blocks) -> usePaginatedBlocks -> fetchBlocksPaginated -> archive
- *
- * Only `fetchBlocks` has a REST branch today, so only the home dashboard moves when a
- * network sets `restEndpoint`. The last test below pins that boundary deliberately: it is
- * the kind of half-migrated state that is easy to misread as finished, and when
- * pagination does move, that test failing is the intended signal to update it.
+ * The second moved in the pagination migration. An earlier revision of this file asserted
+ * that /#/blocks was archive-backed and said it was "meant to fail" when pagination moved
+ * — which is what happened, and is why that test now asserts the opposite.
  */
 
 import { test, expect, type Page, type Route } from '@playwright/test';
@@ -205,7 +202,7 @@ test.describe('blocks list via mina-explorer-api', () => {
   // assertion on the badge here would have been testing the archive path and reading like
   // REST coverage.
 
-  test('/#/blocks is still archive-backed (pagination has not moved yet)', async ({
+  test('/#/blocks now reads REST too, and asks for a zero-based page', async ({
     page,
   }) => {
     const { restCalls, archiveBlockQueries } = await routeBoth(page);
@@ -213,11 +210,80 @@ test.describe('blocks list via mina-explorer-api', () => {
     await page.goto('/#/blocks');
     await expect(tipRow(page)).toBeVisible({ timeout: 15000 });
 
-    // NOT an endorsement — a boundary marker. fetchBlocksPaginated has no REST branch, so
-    // this page still queries the archive while the home dashboard does not. Asserting it
-    // keeps the half-migrated state visible instead of letting it read as finished; when
-    // pagination moves to `POST /v1/blocks`-style paging, this test is meant to fail.
-    expect(archiveBlockQueries()).toBeGreaterThan(0);
-    expect(restCalls.filter(c => c.path === 'blocks').length).toBe(0);
+    // The boundary this replaces asserted the OPPOSITE — that /#/blocks was still archive
+    // backed — and was written to fail when pagination moved. It has.
+    expect(restCalls.filter(c => c.path === 'blocks').length).toBeGreaterThan(
+      0,
+    );
+    expect(archiveBlockQueries()).toBe(0);
+
+    // The app pages from 1, the API from 0. Off by one here shows page 2 on page 1 and
+    // silently hides the newest 25 blocks — rendered output looks entirely normal.
+    const first = restCalls.find(c => c.path === 'blocks');
+    expect(first?.params.get('page')).toBe('0');
+    expect(first?.params.get('type')).toBe('ALL');
+  });
+
+  test('the page count comes from totalCount, NOT the capped totalElements', async ({
+    page,
+  }) => {
+    // The trap this pins: the API caps `totalElements` at 10 000 for Blockberry parity and
+    // derives `totalPages` from that cap, while `totalCount` carries the true row count.
+    // Measured on mesa: totalCount 16 876 against totalPages 400. Deep paging works fine
+    // past the cap, so a reader that trusted totalElements/totalPages would hide a third of
+    // the chain behind a control claiming it does not exist — with no error anywhere.
+    const TOTAL = 16876;
+    await page.route(REST_URL, async (route: Route) => {
+      const url = new URL(route.request().url());
+      const size = Number(url.searchParams.get('size') ?? 25);
+      const rows = blocksFixture.data.blocks.slice(0, size).map(b => ({
+        accountAddress: b.creator,
+        accountImg: null,
+        accountName: null,
+        blockHeight: b.blockHeight,
+        coinbase: Number(b.transactions.coinbase) / 1e9,
+        epoch: null,
+        globalSlotSinceGenesis: null,
+        isCanonical: b.blockHeight <= CANONICAL_MAX,
+        slot: null,
+        stateHash: b.stateHash,
+        timestamp: Date.parse(b.dateTime),
+        transactionsCount: 0,
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: rows,
+          totalElements: 10000, // the parity cap
+          totalPages: 400, // derived from the cap — deliberately wrong for our purposes
+          totalCount: TOTAL, // the truth
+        }),
+      });
+    });
+    await page.route(ARCHIVE_URL, async (route: Route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(blocksFixture),
+      }),
+    );
+    await page.route(DAEMON_URL, async (route: Route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: {} }),
+      }),
+    );
+
+    await page.goto('/#/blocks');
+    await expect(tipRow(page)).toBeVisible({ timeout: 15000 });
+
+    // 16 876 / 25 = 676 pages. Reading totalElements would say 400; totalPages, 400.
+    await expect(page.getByText(/Page 1 of 676/)).toBeVisible();
+    // And the footer states the real block count, not the tip height.
+    await expect(
+      page.getByText(`${TOTAL.toLocaleString()} total blocks`),
+    ).toBeVisible();
   });
 });

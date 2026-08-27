@@ -20,7 +20,7 @@ export function BlocksPage(): ReactNode {
     error,
     page,
     totalPages,
-    totalBlockHeight,
+    totalBlocks,
     goToPage,
     nextPage,
     prevPage,
@@ -32,10 +32,9 @@ export function BlocksPage(): ReactNode {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Blocks</h1>
-          {totalBlockHeight > 0 && (
+          {totalBlocks > 0 && (
             <p className="text-sm text-muted-foreground">
-              {formatNumber(totalBlockHeight)} total blocks on{' '}
-              {network.displayName}
+              {formatNumber(totalBlocks)} total blocks on {network.displayName}
             </p>
           )}
         </div>
