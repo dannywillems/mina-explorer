@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchBlocks,
   fetchBlocksPaginated,
   fetchBlockByHeight,
   fetchBlockByHash,
   fetchNetworkState,
+  findBlockOffsetRest,
+  restAvailable,
+  type BlockFilter,
 } from '@/services/api';
 import { fetchEpochInfo, type EpochInfo } from '@/services/api/daemon';
 import { useNetwork } from './useNetwork';
@@ -153,95 +156,186 @@ interface UsePaginatedBlocksResult {
   nextPage: () => void;
   prevPage: () => void;
   refresh: () => void;
+  /**
+   * Move to the page holding `height`, positioned at the page's midpoint. Resolves to the
+   * height actually landed on, or null when the lookup failed or the backend cannot do it.
+   */
+  jumpToHeight: (height: number) => Promise<number | null>;
+  /** True while `jumpToHeight` is resolving an offset. */
+  jumping: boolean;
+}
+
+interface PaginatedBlocksOptions {
+  pageSize?: number;
+  filter?: BlockFilter;
 }
 
 export function usePaginatedBlocks(
-  pageSize: number = 25,
+  options: PaginatedBlocksOptions = {},
 ): UsePaginatedBlocksResult {
+  const { pageSize = 25, filter = 'all' } = options;
   const { network } = useNetwork();
   const gen = useRequestGeneration();
   const [blocks, setBlocks] = useState<BlockSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [totalBlocks, setTotalBlocks] = useState(0);
+  const [jumping, setJumping] = useState(false);
 
-  const totalPages = Math.ceil(totalBlocks / pageSize);
+  /**
+   * Everything that decides WHICH rows to fetch, in one state value.
+   *
+   * Two separate effects used to drive this — one resetting on network/page-size change and
+   * one firing on page change — and they ping-ponged through `totalBlocks`: the reset set it
+   * to 0, the fetch set it back, and the second effect saw a change and fetched the same
+   * page again. Every page-1 load therefore went out twice. That was invisible at 25 rows
+   * and one request; at 200 rows it is eight.
+   *
+   * With one descriptor there is one effect and one fetch per user action.
+   *
+   * - `key` identifies the LIST (network, page size, filter). When it changes the page
+   *   resets, because a page number means nothing against a different list — and the REST
+   *   `totalCount` really is different per filter (mesa: 17 130 for `all`, 15 777 for
+   *   `canonical`).
+   * - `shift` slides every page boundary down the list by 0..pageSize-1 rows. Zero is the
+   *   default and reproduces the original behaviour exactly; `jumpToHeight` sets it so a
+   *   requested height lands mid-page. Page NUMBERS stay counted from the tip either way,
+   *   so "page 8 432 of 8 500" still says where in the chain you are.
+   * - `nonce` exists so Refresh can re-fetch a page it is already on.
+   */
+  const listKey = `${network.id}|${pageSize}|${filter}`;
+  const [view, setView] = useState({
+    key: listKey,
+    page: 1,
+    shift: 0,
+    nonce: 0,
+  });
 
-  const loadPage = useCallback(
-    async (pageNum: number, forceRefresh: boolean = false) => {
-      const token = gen.next();
-      setLoading(true);
-      setError(null);
+  // Adjusting state during render, rather than in an effect: React discards this render and
+  // re-runs the component immediately, so the fetch effect below never once fires with a
+  // page number belonging to the previous list.
+  if (view.key !== listKey) {
+    setView({ key: listKey, page: 1, shift: 0, nonce: 0 });
+  }
+  const { page, shift } = view;
 
-      try {
-        // The page NUMBER goes to the backend, not a height cursor. The archive still
-        // needs a cursor and derives one itself from `totalBlocks`; the REST backend pages
-        // by offset and ignores it. Keeping that arithmetic here applied the archive's
-        // assumptions — dense heights starting at 1 — to both backends.
-        const data = await fetchBlocksPaginated(pageSize, pageNum, totalBlocks);
-        if (gen.isCurrent(token)) {
-          setBlocks(data.blocks);
-          setHasMore(data.hasMore);
+  /**
+   * The current total, mirrored outside React state.
+   *
+   * The archive branch needs it to place its height cursor, but reading it from state would
+   * put it in the fetch effect's dependencies — and since each fetch WRITES it, that is the
+   * ping-pong above rebuilt. A ref is read at fetch time and never schedules anything.
+   */
+  const totalRef = useRef(0);
 
-          // Only update total on first load or refresh
-          if (pageNum === 1 || forceRefresh || totalBlocks === 0) {
-            setTotalBlocks(data.totalBlocks);
-          }
-        }
-      } catch (err) {
-        if (gen.isCurrent(token)) {
-          setError(
-            err instanceof Error ? err.message : 'Failed to fetch blocks',
-          );
-        }
-      } finally {
-        if (gen.isCurrent(token)) setLoading(false);
-      }
-    },
-    [pageSize, totalBlocks],
-  );
+  // Clamped to 1 so that a not-yet-loaded or single-page list still has a page 1 for
+  // `goToPage` to accept — unclamped, `totalPages === 0` made goToPage reject every value.
+  const totalPages = Math.max(1, Math.ceil((totalBlocks - shift) / pageSize));
 
-  // Reset and load when network changes
   useEffect(() => {
-    setPage(1);
-    setTotalBlocks(0);
-    loadPage(1, true);
-  }, [network.id, pageSize]);
-
-  // Load page when page number changes (but not on initial mount)
-  useEffect(() => {
-    if (totalBlocks > 0) {
-      loadPage(page);
+    // A new list: drop the previous list's total so it cannot be used as a cursor or a
+    // denominator for this one.
+    if (view.page === 1 && view.shift === 0) {
+      totalRef.current = 0;
+      setTotalBlocks(0);
     }
-  }, [page, totalBlocks]);
+
+    const token = gen.next();
+    setLoading(true);
+    setError(null);
+
+    // The page NUMBER goes to the backend, not a height cursor. The archive still needs a
+    // cursor and derives one itself from the known total; the REST backend pages by offset
+    // and ignores it. Keeping that arithmetic here applied the archive's assumptions —
+    // dense heights starting at 1 — to both backends.
+    fetchBlocksPaginated(pageSize, view.page, totalRef.current, {
+      shift: view.shift,
+      filter,
+    })
+      .then(data => {
+        if (!gen.isCurrent(token)) return;
+        setBlocks(data.blocks);
+        setHasMore(data.hasMore);
+        // Trust the total from page 1, or any page while we still have none.
+        if (view.page === 1 || totalRef.current === 0) {
+          totalRef.current = data.totalBlocks;
+          setTotalBlocks(data.totalBlocks);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!gen.isCurrent(token)) return;
+        setError(err instanceof Error ? err.message : 'Failed to fetch blocks');
+      })
+      .finally(() => {
+        if (gen.isCurrent(token)) setLoading(false);
+      });
+    // `view` is one object identity per intended request, so this is exactly one fetch per
+    // user action. `pageSize`/`filter` are already folded into `view.key`.
+  }, [view]);
 
   const goToPage = useCallback(
     (newPage: number) => {
       if (newPage >= 1 && newPage <= totalPages) {
-        setPage(newPage);
+        setView(v => (v.page === newPage ? v : { ...v, page: newPage }));
       }
     },
     [totalPages],
   );
 
   const nextPage = useCallback(() => {
-    if (page < totalPages) {
-      setPage(p => p + 1);
-    }
-  }, [page, totalPages]);
+    setView(v => (v.page < totalPages ? { ...v, page: v.page + 1 } : v));
+  }, [totalPages]);
 
   const prevPage = useCallback(() => {
-    if (page > 1) {
-      setPage(p => p - 1);
-    }
-  }, [page]);
+    setView(v => (v.page > 1 ? { ...v, page: v.page - 1 } : v));
+  }, []);
 
   const refresh = useCallback(() => {
-    setPage(1);
-    loadPage(1, true);
-  }, [loadPage]);
+    setView(v => ({ ...v, page: 1, shift: 0, nonce: v.nonce + 1 }));
+  }, []);
+
+  const jumpToHeight = useCallback(
+    async (height: number): Promise<number | null> => {
+      // Offset-addressed reads are a REST-backend capability; the archive branch has only
+      // a height cursor built on a tip-height-as-row-count approximation.
+      if (!restAvailable()) return null;
+      setJumping(true);
+      try {
+        const { offset, totalBlocks: total } = await findBlockOffsetRest(
+          height,
+          filter,
+        );
+        if (total === 0) return null;
+
+        // Put the target at the page midpoint, then clamp so neither end of the list is
+        // paged past: near the tip the target simply sits nearer the top of the page, and
+        // near the oldest block, nearer the bottom. Both beat returning a short page.
+        const half = Math.floor(pageSize / 2);
+        const start = Math.min(
+          Math.max(0, offset - half),
+          Math.max(0, total - pageSize),
+        );
+
+        totalRef.current = total;
+        setTotalBlocks(total);
+        setView(v => ({
+          ...v,
+          page: Math.floor(start / pageSize) + 1,
+          shift: start % pageSize,
+          // Landing on the page already shown must still re-fetch: the shift may have
+          // changed even when the page number did not.
+          nonce: v.nonce + 1,
+        }));
+        return height;
+      } catch {
+        return null;
+      } finally {
+        setJumping(false);
+      }
+    },
+    [filter, pageSize],
+  );
 
   return {
     blocks,
@@ -255,6 +349,8 @@ export function usePaginatedBlocks(
     nextPage,
     prevPage,
     refresh,
+    jumpToHeight,
+    jumping,
   };
 }
 

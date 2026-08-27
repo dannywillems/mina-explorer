@@ -112,14 +112,22 @@ function buildRestBlocksPage(params: URLSearchParams): unknown {
   // the best-chain window from the k-finalized prefix, and a mock that ignored it would
   // happily pass the very bug this fixture exists to catch (asking for CANONICAL and
   // rendering a list 290 blocks stale).
+  //
+  // The three values PARTITION the list on `isCanonical` — measured against production on
+  // 2026-08-27, `CANONICAL.totalCount + ORPHANED.totalCount === ALL.totalCount` exactly on
+  // mesa, devnet and mainnet. `ORPHANED` returning [] here was the earlier reading, and it
+  // is wrong twice over: orphans ARE in `ALL` (one 50-row mesa page spans 41 heights), and
+  // `ORPHANED` is the whole complement of canonical, live tip included.
   const type = params.get('type') ?? 'ALL';
   const filtered =
     type === 'CANONICAL'
       ? all.filter(b => b.isCanonical)
       : type === 'ORPHANED'
-        ? []
+        ? all.filter(b => !b.isCanonical)
         : all;
 
+  // The API rejects size > 50 with a 400 rather than clamping, so the app never asks for
+  // more; a mock that quietly served 200 rows would hide a broken chunked fetch.
   const size = Number(params.get('size') ?? 25);
   const page = Number(params.get('page') ?? 0);
   const ordered =
@@ -161,6 +169,18 @@ async function handleRestRequest(route: Route): Promise<void> {
   const path = match ? match[1] : '';
 
   if (path === 'blocks') {
+    // Mirror the real ceiling: the API answers 400 on size > 50 (measured — it does NOT
+    // clamp), so a client bug that asked for a 200-row page must fail here too rather than
+    // being papered over by a mock with no limit.
+    const size = Number(url.searchParams.get('size') ?? 25);
+    if (!Number.isInteger(size) || size < 1 || size > 50) {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 400, error: 'Bad Request' }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

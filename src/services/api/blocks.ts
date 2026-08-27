@@ -1,5 +1,10 @@
 import { getClient, type GraphQLClient } from './client';
-import { fetchBlocksPageRest, fetchBlocksRest, restAvailable } from './rest';
+import {
+  fetchBlocksRangeRest,
+  fetchBlocksRest,
+  restAvailable,
+  type BlockFilter,
+} from './rest';
 import { queryDaemon, isDaemonUnavailableError } from './daemon';
 import {
   supportsBestChainFilter,
@@ -559,19 +564,28 @@ export async function fetchBlocks(limit: number = 25): Promise<BlockSummary[]> {
  * Takes a ONE-BASED PAGE NUMBER, not a cursor. The archive has no offset paging, so its
  * branch still derives a height cursor — but that arithmetic now lives here, beside the
  * backend that needs it, instead of in the hook where it was applied to both backends. See
- * `fetchBlocksPageRest` for what the height math gets wrong on a chain whose archive does
+ * `fetchBlocksRangeRest` for what the height math gets wrong on a chain whose archive does
  * not start at height 1.
  *
  * `knownTotal` is the caller's current total (tip height on the archive path), needed only
  * to place the cursor for page > 1. The REST path ignores it and asks for the page directly.
+ *
+ * `opts.shift` slides every page boundary down the list by 0..pageSize-1 rows, which is how
+ * /#/blocks centres a page on a requested block height while keeping page numbers counted
+ * from the tip. `opts.filter` selects the canonicality subset. Both are REST-only: the
+ * archive branch has neither an offset to shift nor a faithful way to express the filter
+ * (its own `inBestChain` keeps unfinalized tip blocks and is not even universally
+ * supported), so `BlocksPage` does not offer either control on an archive-backed network.
  */
 export async function fetchBlocksPaginated(
   pageSize: number = 25,
   pageNum: number = 1,
   knownTotal: number = 0,
+  opts: { shift?: number; filter?: BlockFilter } = {},
 ): Promise<BlocksPage> {
   if (restAvailable()) {
-    const page = await fetchBlocksPageRest(pageNum, pageSize);
+    const offset = (pageNum - 1) * pageSize + (opts.shift ?? 0);
+    const page = await fetchBlocksRangeRest(offset, pageSize, opts.filter);
     return {
       blocks: page.blocks,
       hasMore: page.hasMore,

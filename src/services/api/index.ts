@@ -1,6 +1,13 @@
 export { GraphQLClient, ApiError, getClient, initClient } from './client';
 export { setDaemonEndpoint, getDaemonEndpoint } from './daemon';
-export { setRestEndpoint, getRestEndpoint, restAvailable } from './rest';
+export {
+  setRestEndpoint,
+  getRestEndpoint,
+  restAvailable,
+  findBlockOffsetRest,
+  REST_MAX_PAGE_SIZE,
+  type BlockFilter,
+} from './rest';
 export {
   fetchBlocks,
   fetchBlocksPaginated,
