@@ -16,10 +16,11 @@ import { test, expect, isMocked, FIXTURE_DATA } from './fixtures';
  */
 test.describe('network switch race (#66)', () => {
   // Both networks report the SAME max block height so that the stale response's
-  // setTotalBlockHeight is a no-op — otherwise usePaginatedBlocks' second effect
-  // would refetch on the height change and incidentally mask the race. Only the
-  // per-row block heights differ, so the rendered rows unambiguously reveal
-  // which network's data is on screen.
+  // setTotalBlocks is a no-op. That mattered when usePaginatedBlocks had a second
+  // effect keyed on the total, which would have refetched on a height change and
+  // incidentally masked the race; that effect is gone, but an equal total still
+  // keeps the two responses interchangeable in every respect except the rows, which
+  // is what makes the rendered rows unambiguous evidence of which network won.
   const SHARED_MAX_HEIGHT = 950000;
   function markedBlocks(base: number): unknown {
     const clone = JSON.parse(JSON.stringify(FIXTURE_DATA.blocks));
@@ -48,8 +49,8 @@ test.describe('network switch race (#66)', () => {
    * dispatched the superseded request.
    *
    * `totalCount` stays SHARED_MAX_HEIGHT for the reason the constant exists: an equal total
-   * keeps the stale response's setTotalBlocks a no-op, so usePaginatedBlocks' second effect
-   * does not refetch and incidentally mask the race.
+   * keeps the stale response's setTotalBlocks a no-op, so the two responses differ only in
+   * their rows and nothing but the request-generation guard can decide which one wins.
    */
   function markedRestBlocks(base: number): unknown {
     const clone = JSON.parse(JSON.stringify(FIXTURE_DATA.blocks));

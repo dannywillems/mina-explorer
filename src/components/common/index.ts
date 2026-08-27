@@ -8,6 +8,7 @@ export { SearchBar } from './SearchBar';
 export { NetworkSelector } from './NetworkSelector';
 export { ThemeToggle } from './ThemeToggle';
 export { Pagination } from './Pagination';
+export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
 export { LoadingSpinner } from './LoadingSpinner';
 export { HashLink } from './HashLink';
 export { TimeAgo } from './TimeAgo';

@@ -279,8 +279,11 @@ test.describe('blocks list via mina-explorer-api', () => {
     await page.goto('/#/blocks');
     await expect(tipRow(page)).toBeVisible({ timeout: 15000 });
 
-    // 16 876 / 25 = 676 pages. Reading totalElements would say 400; totalPages, 400.
-    await expect(page.getByText(/Page 1 of 676/)).toBeVisible();
+    // 16 876 / 20 = 844 pages. Reading totalElements would say 400; totalPages, 400.
+    // The page number is an input now, so "Page 1" is asserted on its value rather than as
+    // part of the sentence — dropping it would have left the starting page unpinned.
+    await expect(page.getByTestId('blocks-page-number')).toHaveValue('1');
+    await expect(page.getByText('of 844')).toBeVisible();
     // And the footer states the real block count, not the tip height.
     await expect(
       page.getByText(`${TOTAL.toLocaleString()} total blocks`),
