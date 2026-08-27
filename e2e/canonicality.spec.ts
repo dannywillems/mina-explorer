@@ -142,14 +142,22 @@ test.describe('Block canonicality on forks (issue #86)', () => {
   test('blocks list shows a single canonical entry at a forked height', async ({
     page,
   }) => {
-    // devnet EXPLICITLY, because this asserts the ARCHIVE's fork handling — the
+    // A CUSTOM ENDPOINT, because this asserts the ARCHIVE's fork handling — the
     // `inBestChain` filter excluding an orphaned sibling, and the `bestChainFilter` probe
-    // behind it. The default network (mesa) now reads the blocks list from
-    // mina-explorer-api, where `type=ALL` is already the best-chain window and the orphan
-    // never reaches the client, so running this there would exercise the API's filtering
-    // rather than this app's. The archive path still serves every network that has not
-    // moved, so the behaviour under test is live, not legacy.
-    await page.goto('/#/blocks?network=devnet');
+    // behind it — and every configured network now reads its blocks list from
+    // mina-explorer-api, where `type=ALL` is already the best-chain window so the orphan
+    // never reaches the client. Running this on any named network would test the API's
+    // filtering rather than this app's.
+    //
+    // Setting a custom endpoint clears `restEndpoint` (see NetworkContext: the user has
+    // redirected archive AND daemon at their own host, so serving blocks from the previous
+    // network's REST proxy would show a different chain's data). That is the supported way
+    // to reach the archive path now, and it is not a test-only contrivance — it is exactly
+    // what a self-hosted user pointing at their own archive gets.
+    await page.addInitScript((url: string) => {
+      window.localStorage.setItem('mina-explorer-custom-endpoint', url);
+    }, 'https://archive-node-api.mesa-rc.minaprotocol.com');
+    await page.goto('/#/blocks');
 
     // Exactly one row at the fork height: the best-chain block, not the
     // orphaned sibling (which the old height heuristic also badged Canonical)

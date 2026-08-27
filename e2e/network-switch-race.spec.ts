@@ -110,21 +110,16 @@ test.describe('network switch race (#66)', () => {
       mesaBlocksFulfilled = true;
     });
 
-    // Devnet archive: the blocks list answers instantly.
-    await page.route(
-      /\/\/devnet-archive-node-api\.gcp\.o1test\.net/,
-      async route => {
-        if (!isBlocksList(route.request().postData())) {
-          await route.fallback();
-          return;
-        }
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(markedBlocks(DEVNET_BASE)),
-        });
-      },
-    );
+    // Devnet reads mina-explorer-api too now, so BOTH sides of the race are REST. That is
+    // the original #66 scenario restored: one shared client whose endpoint is swapped in
+    // place, rather than two independent archive clients. The fast side answers instantly.
+    await page.route(/\/mina-devnet\/v1\/blocks/, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(markedRestBlocks(DEVNET_BASE)),
+      });
+    });
 
     // Start on mesa; the blocks request is now in flight (and slow).
     await page.goto('/#/blocks?network=mesa');
