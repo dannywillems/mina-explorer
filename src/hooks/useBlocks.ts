@@ -205,7 +205,11 @@ export function pageCount(
 ): number {
   if (total <= 0) return 1;
   if (shift === 0) return Math.max(1, Math.ceil(total / pageSize));
-  return 1 + Math.max(1, Math.ceil((total - shift) / pageSize));
+  // `Math.max(0, ...)` and not `Math.max(1, ...)`: when the whole list fits in the short
+  // page 1 there is no page 2, and flooring the remainder to 1 would advertise an empty
+  // one. Unreachable today — `jumpToHeight` only sets a shift when total >= pageSize >
+  // shift — but the two functions have to agree for any input, not just the reachable ones.
+  return 1 + Math.max(0, Math.ceil((total - shift) / pageSize));
 }
 
 export function usePaginatedBlocks(
@@ -348,11 +352,16 @@ export function usePaginatedBlocks(
       const jumpKey = listKey;
       setJumping(true);
       try {
-        const { offset, totalBlocks: total } = await findBlockOffsetRest(
-          height,
-          filter,
-        );
-        if (total === 0) return null;
+        const {
+          offset,
+          totalBlocks: total,
+          found,
+        } = await findBlockOffsetRest(height, filter);
+        // `found` is false when the height is not in THIS list — most often because the
+        // filter excludes it. Refusing is the whole point: the search clamps, so without
+        // this the page would centre on the nearest row and present it as the block the
+        // user asked for. Under `orphaned` on mainnet that is almost every height typed.
+        if (total === 0 || !found) return null;
 
         // Put the target at the page midpoint, then clamp so neither end of the list is
         // paged past: near the tip the target simply sits nearer the top of the page, and

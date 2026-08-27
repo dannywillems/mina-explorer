@@ -45,7 +45,9 @@ export function SegmentedControl<T extends string | number>({
       <span className="text-sm text-muted-foreground">{label}</span>
       <div
         role="group"
-        aria-label={label}
+        // The visible label carries a trailing colon for layout; a screen reader would
+        // read it out, so the accessible name drops it.
+        aria-label={label.replace(/:\s*$/, '')}
         data-testid={testId}
         className="flex flex-wrap gap-1"
       >

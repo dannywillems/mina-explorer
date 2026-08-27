@@ -5,7 +5,6 @@ export {
   getRestEndpoint,
   restAvailable,
   findBlockOffsetRest,
-  REST_MAX_PAGE_SIZE,
   type BlockFilter,
 } from './rest';
 export {

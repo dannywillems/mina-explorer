@@ -354,44 +354,59 @@ function GoToHeight({
     }
     setFailed(false);
     const landed = await onJump(height);
+    // A refusal is the common case under a filter that excludes the height — the hook will
+    // not centre on a neighbouring block and call it a hit — so it needs to be SAID, not
+    // just tinted. Without the message the page simply does not move and looks broken.
     if (landed === null) setFailed(true);
   };
 
   return (
-    <form className="flex items-center gap-2" onSubmit={submit}>
-      <label
-        htmlFor="blocks-goto-height"
-        className="whitespace-nowrap text-sm text-muted-foreground"
-      >
-        Go to block:
-      </label>
-      <input
-        id="blocks-goto-height"
-        data-testid="blocks-goto-height"
-        type="text"
-        inputMode="numeric"
-        placeholder="height"
-        value={draft}
-        disabled={disabled || totalBlocks === 0}
-        onChange={e => {
-          setDraft(e.target.value.replace(/[^\d]/g, ''));
-          setFailed(false);
-        }}
-        className={cn(
-          inputClass,
-          'w-28 font-mono',
-          failed && 'border-destructive focus:ring-destructive',
-        )}
-      />
-      <button
-        type="submit"
-        disabled={disabled || totalBlocks === 0 || draft === ''}
-        title="Jump to this block height"
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <CornerDownLeft size={14} />
-        Go
-      </button>
+    <form className="flex flex-col gap-1" onSubmit={submit}>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="blocks-goto-height"
+          className="whitespace-nowrap text-sm text-muted-foreground"
+        >
+          Go to block:
+        </label>
+        <input
+          id="blocks-goto-height"
+          data-testid="blocks-goto-height"
+          type="text"
+          inputMode="numeric"
+          placeholder="height"
+          value={draft}
+          disabled={disabled || totalBlocks === 0}
+          aria-invalid={failed}
+          onChange={e => {
+            setDraft(e.target.value.replace(/[^\d]/g, ''));
+            setFailed(false);
+          }}
+          className={cn(
+            inputClass,
+            'w-28 font-mono',
+            failed && 'border-destructive focus:ring-destructive',
+          )}
+        />
+        <button
+          type="submit"
+          disabled={disabled || totalBlocks === 0 || draft === ''}
+          title="Jump to this block height"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <CornerDownLeft size={14} />
+          Go
+        </button>
+      </div>
+      {failed && (
+        <p
+          data-testid="blocks-goto-error"
+          className="text-xs text-destructive"
+          role="status"
+        >
+          No block at that height in this list.
+        </p>
+      )}
     </form>
   );
 }

@@ -433,23 +433,42 @@ function toBlocksPage(
  *
  * | case | probes | offset found | naive `tip - height` |
  * |---|---|---|---|
- * | mainnet h=100 000 `canonical` | 4 | 446 458 | 446 746 ✗ |
- * | mainnet h=400 000 `all` | 5 | 147 731 | 146 746 ✗ |
- * | mesa h=300 000 `canonical` | 6 | 12 429 | 12 712 ✗ |
- * | devnet h=545 169 `all` (forked height) | 10 | 6 199 | 4 291 ✗ |
+ * | mainnet h=100 000 `canonical` | 5 | 446 460 | 446 746 ✗ |
+ * | mainnet h=400 000 `all` | 6 | 147 736 | 146 746 ✗ |
+ * | mesa h=300 000 `canonical` | 7 | 12 438 | 12 712 ✗ |
+ * | devnet h=545 169 `all` (forked height) | 17 | 6 212 | 4 291 ✗ |
+ * | mainnet h=300 000 `orphaned` (absent) | 2 | — `found: false` | — |
  *
- * The dense-fork region near a tip is the slow case at ~2 s; it sits behind an explicit
+ * The dense-fork region near a tip is the slow case at ~3 s; it sits behind an explicit
  * "Go" button with a spinner, which is why probe count is traded for exactness here.
  *
- * Returns the offset of the FIRST row at or below `height` — for a height with a fork
- * sibling that is the winning block, which is the one a reader means. Returns 0 for a
- * height at or above the tip and `total - 1` for one below the retained window; both are
- * clamps rather than errors, because "jump past the end" should land you at the end.
+ * ## Interpolation alone is not safe — it is bisection-safeguarded
+ *
+ * Pure interpolation degrades to ONE ROW PER PROBE on a skewed key distribution, and
+ * `orphaned` is exactly that shape: ~290 contiguous heights at the tip and a long sparse
+ * tail of fork siblings. Run over a synthetic list of that shape, a plain interpolation
+ * search missed 8 of 12 targets inside a 12-probe budget — worst case 20 rows out, which
+ * at 20 rows per page puts the target off the page entirely while still LOOKING converged.
+ *
+ * So whenever a step fails to halve the interval, the next one bisects. That bounds the
+ * search at 2·log2(n) probes while leaving the common case — which converges in 4 to 10 —
+ * untouched.
+ *
+ * ## `found` is not decoration
+ *
+ * The interval clamps: a height above the tip lands at 0, one below the retained window at
+ * `total - 1`. Without a found flag those clamps are indistinguishable from a hit, and the
+ * caller centres a page on the nearest row and presents it as the block that was asked
+ * for. That is not hypothetical — under `orphaned` on mainnet only 1 276 of 547 736 heights
+ * are present, so almost any height typed is absent, and heights 300 000, 100 000 and 3 000
+ * all clamped to the same row (544 979) and all reported success. `found` says whether the
+ * row at `offset` actually carries `height`; `jumpToHeight` refuses the jump when it does
+ * not.
  */
 export async function findBlockOffsetRest(
   height: number,
   filter: BlockFilter = 'all',
-): Promise<{ offset: number; totalBlocks: number }> {
+): Promise<{ offset: number; totalBlocks: number; found: boolean }> {
   const probe = async (
     offset: number,
   ): Promise<{ height: number | null; total: number }> => {
@@ -469,32 +488,49 @@ export async function findBlockOffsetRest(
 
   const head = await probe(0);
   const total = head.total;
-  if (total === 0 || head.height === null) return { offset: 0, totalBlocks: 0 };
+  if (total === 0 || head.height === null) {
+    return { offset: 0, totalBlocks: 0, found: false };
+  }
   // At or newer than the tip — the first page is already the answer.
-  if (height >= head.height) return { offset: 0, totalBlocks: total };
+  if (height >= head.height) {
+    return { offset: 0, totalBlocks: total, found: height === head.height };
+  }
 
   let lo = 0;
   let loHeight = head.height;
   let hi = total - 1;
   const tail = await probe(hi);
-  if (tail.height === null) return { offset: 0, totalBlocks: total };
+  if (tail.height === null) {
+    return { offset: 0, totalBlocks: total, found: false };
+  }
   let hiHeight = tail.height;
   // Older than anything retained — clamp to the last row.
-  if (height <= hiHeight) return { offset: hi, totalBlocks: total };
+  if (height <= hiHeight) {
+    return { offset: hi, totalBlocks: total, found: height === hiHeight };
+  }
 
   // `lo` always holds a row NEWER than the target and `hi` one at or OLDER than it, so the
-  // answer is always inside (lo, hi]. The loop is bounded because each pass either finds
-  // the height or strictly narrows that interval; the cap is a guard against a list that
-  // is not actually sorted, not an expected exit.
-  for (let step = 0; step < 12 && hi - lo > 1; step++) {
-    const span = loHeight - hiHeight;
-    // Interpolate on height, then nudge inside the open interval so a flat run of repeated
-    // heights cannot pin the guess to an endpoint and spin.
-    const ratio = span > 0 ? (loHeight - height) / span : 0.5;
-    const guess = Math.min(
-      hi - 1,
-      Math.max(lo + 1, lo + Math.round(ratio * (hi - lo))),
-    );
+  // answer is always inside (lo, hi]. Each pass strictly narrows that interval — `guess` is
+  // clamped into (lo, hi), which the loop condition keeps non-empty — so this terminates.
+  //
+  // The budget allows two probes per halving, which is what the bisection safeguard needs
+  // in the worst case; the common case exits far below it.
+  const maxSteps = 2 * Math.ceil(Math.log2(total + 2)) + 8;
+  let bisect = false;
+  for (let step = 0; step < maxSteps && hi - lo > 1; step++) {
+    const width = hi - lo;
+    let guess: number;
+    if (bisect) {
+      guess = lo + Math.floor(width / 2);
+    } else {
+      const span = loHeight - hiHeight;
+      // Interpolate on height, then nudge inside the open interval so a flat run of
+      // repeated heights cannot pin the guess to an endpoint and spin.
+      const ratio = span > 0 ? (loHeight - height) / span : 0.5;
+      guess = lo + Math.round(ratio * width);
+    }
+    guess = Math.min(hi - 1, Math.max(lo + 1, guess));
+
     const at = await probe(guess);
     if (at.height === null) break;
     if (at.height > height) {
@@ -504,8 +540,12 @@ export async function findBlockOffsetRest(
       hi = guess;
       hiHeight = at.height;
     }
+    // An interpolation step that failed to halve the interval is the signature of a skewed
+    // key distribution, where interpolation walks one row at a time. Bisect the next one.
+    bisect = !bisect && (hi - lo) * 2 > width;
   }
 
-  // `hi` is the first row at or below the target height.
-  return { offset: hi, totalBlocks: total };
+  // `hi` is the first row at or below the target height — the winning block when a fork
+  // sibling shares it. It carries `height` itself only if the height is really in this list.
+  return { offset: hi, totalBlocks: total, found: hiHeight === height };
 }

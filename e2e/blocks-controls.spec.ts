@@ -391,6 +391,60 @@ test.describe('blocks page controls', () => {
     await expect(page.getByText('Pending', { exact: true })).toHaveCount(0);
   });
 
+  test('a height the filter excludes is refused, not silently approximated', async ({
+    page,
+  }) => {
+    // The offset search CLAMPS at both ends, so without a found flag it reports the nearest
+    // row as a hit and the page centres on a block the user never asked for. Measured on
+    // mainnet under this filter, heights 300 000, 100 000 and 3 000 all clamped to the same
+    // row (544 979) and all looked like successes.
+    await routeApi(page);
+    await page.goto('/#/blocks');
+    await expect(page.locator('tbody tr').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page
+      .getByTestId('blocks-filter')
+      .getByRole('button', { name: 'Non-canonical' })
+      .click();
+    await expect(page.getByText('293 total blocks')).toBeVisible({
+      timeout: 15000,
+    });
+    const before = await heightAt(page, 0);
+
+    // Height 400 is canonical-only: it is in ALL and CANONICAL, never in ORPHANED.
+    await page.getByTestId('blocks-goto-height').fill('400');
+    await page.getByRole('button', { name: 'Go' }).click();
+
+    await expect(page.getByTestId('blocks-goto-error')).toBeVisible({
+      timeout: 15000,
+    });
+    // And the table did not move to some neighbouring block.
+    expect(await heightAt(page, 0)).toBe(before);
+  });
+
+  test('a forked height resolves under All, where the same height is present', async ({
+    page,
+  }) => {
+    // The complement of the test above: 300 IS in the ALL list (twice — it is one of the
+    // forked heights), so the same control must succeed there. Guards against "fixed" the
+    // lazy way, by refusing everything.
+    await routeApi(page);
+    await page.goto('/#/blocks');
+    await expect(page.locator('tbody tr').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.getByTestId('blocks-goto-height').fill('300');
+    await page.getByRole('button', { name: 'Go' }).click();
+
+    await expect
+      .poll(async () => heightAt(page, 10), { timeout: 15000 })
+      .toBe(300);
+    await expect(page.getByTestId('blocks-goto-error')).toHaveCount(0);
+  });
+
   test('the page number is editable and jumps directly', async ({ page }) => {
     await routeApi(page);
     await page.goto('/#/blocks');
