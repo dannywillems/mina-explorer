@@ -4,6 +4,7 @@ export { FailedBadge } from './FailedBadge';
 export { Header } from './Header';
 export { Footer } from './Footer';
 export { Disclaimer } from './Disclaimer';
+export { ConsensusTimeBar } from './ConsensusTimeBar';
 export { SearchBar } from './SearchBar';
 export { NetworkSelector } from './NetworkSelector';
 export { ThemeToggle } from './ThemeToggle';

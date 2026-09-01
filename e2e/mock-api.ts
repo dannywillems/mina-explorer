@@ -484,6 +484,46 @@ async function handleDaemonRequest(route: Route): Promise<void> {
       return;
     }
 
+    // Consensus time now — the wall-clock slot shown in the app-wide bar.
+    // Checked before 'bestChain'/'account' only for symmetry with the rest of
+    // this chain; the query shares no substring with either.
+    //
+    // The slot window is pinned to the CURRENT time rather than to the fixture's
+    // timestamps: the bar advances the slot locally from `startTime`, and a
+    // window in the distant past would make it tick out an absurd slot number.
+    if (query.includes('daemonStatus')) {
+      const SLOT_DURATION = 180_000;
+      const slotStart = Math.floor(Date.now() / SLOT_DURATION) * SLOT_DURATION;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            daemonStatus: {
+              consensusTimeNow: {
+                // 61 * 7140 + 3570 — consistent with the epoch/slot the
+                // bestChain mock reports, one slot ahead of the best tip.
+                globalSlot: '439110',
+                startTime: String(slotStart),
+                endTime: String(slotStart + SLOT_DURATION),
+              },
+              consensusTimeBestTip: { globalSlot: '439109' },
+              globalSlotSinceGenesisBestTip: 1003589,
+              consensusConfiguration: {
+                slotsPerEpoch: 7140,
+                slotDuration: SLOT_DURATION,
+                // The daemon's own format: a space instead of `T` and six
+                // fractional digits, which is NOT valid ISO-8601. Kept verbatim
+                // so the parser is exercised, not bypassed.
+                genesisStateTimestamp: '2024-06-05 00:00:00.000000Z',
+              },
+            },
+          },
+        }),
+      });
+      return;
+    }
+
     // Handle bestChain queries (daemon epoch info + transaction listing)
     // Must be checked before 'account' since bestChain queries contain 'accountUpdates'
     if (query.includes('bestChain')) {

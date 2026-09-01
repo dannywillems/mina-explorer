@@ -5,6 +5,7 @@ export {
   useNetworkState,
   useEpochInfo,
 } from './useBlocks';
+export { useConsensusTime, type ConsensusTime } from './useConsensusTime';
 export { useSearch } from './useSearch';
 export { useNetwork } from './useNetwork';
 export { useAccount } from './useAccount';
