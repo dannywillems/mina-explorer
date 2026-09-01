@@ -61,8 +61,12 @@ test.describe('Mina Explorer', () => {
       .first();
     await expect(epochCard).toBeVisible();
 
-    // Check for slot progress text (shows "X / 7,140 slots")
-    await expect(page.locator('text=/slots/')).toBeVisible({ timeout: 10000 });
+    // Check for slot progress text (shows "X / 7,140 slots").
+    // Matched by test id, not text: the consensus bar in the layout also prints
+    // "slots", so a plain text match is ambiguous and fails strict mode.
+    await expect(page.getByTestId('epoch-slot-progress')).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('recent blocks load', async ({ page }) => {

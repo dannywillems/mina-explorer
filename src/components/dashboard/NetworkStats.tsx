@@ -81,7 +81,15 @@ export function NetworkStats(): ReactNode {
                 style={{ width: `${slotProgress}%` }}
               />
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div
+              className="mt-1 text-xs text-muted-foreground"
+              data-testid="epoch-slot-progress"
+              // Distinguishes this from the consensus bar above, which shows a
+              // slightly higher slot: this is the latest block's slot, that one
+              // is the slot the network is in right now. They diverge by the
+              // number of empty slots since the last block.
+              title="Slot of the latest block within the current epoch"
+            >
               {formatNumber(slot)} / {formatNumber(SLOTS_PER_EPOCH)} slots
             </div>
           </div>
